@@ -40,9 +40,14 @@ export default function SignIn() {
         e.preventDefault();
         setError("");
         try {
-            await api.post("/auth/signup", signUpData);
+            await api.post("/api/signup", signUpData).then((resp) => {
+                if (resp.status == 201) {
+                    alert(resp.data.message);
+                }
+            });
             setIsSignUp(false);
         } catch (err) {
+            alert(err);
             setError(err.response?.data?.message || "Sign up failed.");
         }
     };

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { connectMainDb, getMainDb } = require('./config/mainDb');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,6 +14,8 @@ app.use(cors({
 
 // Middleware to parse JSON
 app.use(express.json());
+
+app.use('/api', authRoutes); // ✅ Mount the signup route
 
 // Sample API route
 app.get('/api/test', (req, res) => {
