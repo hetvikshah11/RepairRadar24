@@ -13,7 +13,9 @@ export default function SignIn() {
 
     useEffect(() => {
         const token = localStorage.getItem("token");
-        if (token) navigate("/dashboard");
+        console.log("Token:", token);
+        
+        // if (token) navigate("/dashboard");
     }, [navigate]);
 
     const handleSignInChange = (e) => {
@@ -28,11 +30,24 @@ export default function SignIn() {
         e.preventDefault();
         setError("");
         try {
-            const res = await api.post("/auth/login", signInData);
-            localStorage.setItem("token", res.data.token);
-            navigate("/dashboard");
+            await api.post("/api/signin", signInData).then((resp) => {
+                if (resp.status === 200) { 
+                    alert("Welcome "+resp.data.user.name);
+                    localStorage.setItem("token", resp.data.token);
+                    navigate("https://google.com");
+                }
+            }); 
         } catch (err) {
             setError(err.response?.data?.message || "Sign in failed.");
+            // if (err.response?.status === 400) {
+            //     alert("Email and password are required.");
+            // }
+            if (err.response?.status === 401) {
+                alert("Incorrect password");
+            }
+            else if (err.response?.status === 404) {
+                alert("No user found with this email.");
+            }
         }
     };
 
