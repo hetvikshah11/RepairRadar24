@@ -62,12 +62,12 @@ router.post('/signin', async (req, res) => {
     if (!isMatch)
       return res.status(401).json({ error: 'Invalid password.' });
 
-    if(user.dbUrl === ""){
+    if (user.dbUrl === "") {
       res.status(204).json({ error: 'No database URL found for this user.' });
       return;
     }
 
-    
+
     // Generate JWT token
     const token = jwt.sign(
       {

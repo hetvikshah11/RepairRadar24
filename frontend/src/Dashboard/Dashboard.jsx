@@ -7,10 +7,10 @@ function Dashboard() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
             alert("You are not logged in. Please sign in.");
-            navigate('/signin'); // Redirect if no token
+            navigate('/'); // Redirect if no token
             return;
         }
 

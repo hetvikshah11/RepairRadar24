@@ -12,7 +12,7 @@ export default function SignIn() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         console.log("Token:", token);
         
         // if (token) navigate("/dashboard");
@@ -37,7 +37,7 @@ export default function SignIn() {
                 }
                 if (resp.status === 200) { 
                     alert("Welcome "+resp.data.user.name);
-                    localStorage.setItem("token", resp.data.token);
+                    sessionStorage.setItem("token", resp.data.token);
                     navigate("/dashboard");
                 }
             }); 
