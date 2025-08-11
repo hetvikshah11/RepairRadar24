@@ -18,10 +18,13 @@ async function connectUserDb(dbUrl, dbName, jwtToken) {
 
   const db = client.db(dbName);
   userDbConnections.set(jwtToken, db);
+  console.log(userDbConnections)
   return db;
 }
 
 function getUserDb(jwtToken) {
+  console.log("Getting user DB for token:", jwtToken);
+  console.log("Current connections:", userDbConnections);
   return userDbConnections.get(jwtToken);
 }
 

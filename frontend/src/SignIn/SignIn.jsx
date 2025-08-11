@@ -14,7 +14,7 @@ export default function SignIn() {
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         console.log("Token:", token);
-        
+
         // if (token) navigate("/dashboard");
     }, [navigate]);
 
@@ -35,12 +35,17 @@ export default function SignIn() {
                     alert("Account not approved by owner. Contact 9601613653");
                     return;
                 }
-                if (resp.status === 200) { 
-                    alert("Welcome "+resp.data.user.name);
+                if (resp.status === 200) {
+                    alert("Welcome " + resp.data.user.name);
                     sessionStorage.setItem("token", resp.data.token);
-                    navigate("/dashboard");
+                    if (!resp.data.schemaConfigured) {
+                        navigate("/config");
+                    }
+                    else {
+                        navigate("/dashboard");
+                    }
                 }
-            }); 
+            });
         } catch (err) {
             setError(err.response?.data?.message || "Sign in failed.");
             // if (err.response?.status === 400) {

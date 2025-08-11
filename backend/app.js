@@ -17,7 +17,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/api', authRoutes); // ✅ Mount the signup route
-app.use('/user',userRoutes);
+app.use('/user',userRoutes); // protected user routes
 
 // Sample API route
 app.get('/api/test', (req, res) => {

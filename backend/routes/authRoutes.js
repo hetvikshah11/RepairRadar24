@@ -31,7 +31,8 @@ router.post('/signup', async (req, res) => {
       email,
       password: hashedPassword,
       validity: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days free validity in milliseconds
-      dbUrl: ""
+      dbUrl: "",
+      schemaConfigured: false
     });
 
     res.status(201).json({
@@ -83,7 +84,8 @@ router.post('/signin', async (req, res) => {
     res.status(200).json({
       message: 'Signin successful',
       token,
-      user: { name: user.name, email: user.email }
+      user: { name: user.name, email: user.email },
+      schemaConfigured: user.schemaConfigured
     });
 
   } catch (err) {
