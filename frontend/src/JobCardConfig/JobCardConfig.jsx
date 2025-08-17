@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import api from "../axiosConfig";
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
 
 const FieldConfig = ({ fields, setFields }) => {
   const addField = () => {
@@ -97,6 +98,14 @@ const FieldConfig = ({ fields, setFields }) => {
 export default function JobCardConfigRecursive() {
   const [fields, setFields] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      alert("You need to be logged in to access this page.");
+      navigate("/");
+    }
+  }, []);
 
   const saveConfig = async () => {
     console.log("Saving configuration:", fields);

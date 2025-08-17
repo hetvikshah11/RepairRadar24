@@ -19,11 +19,15 @@ async function connectMainDb() {
   console.log('✅ Connected to Main MongoDB');
 
   mainDb = client.db(dbName);
+  console.log(`Connected to database: ${dbName}`);
   return mainDb;
 }
 
-function getMainDb() {
-  if (!mainDb) throw new Error('Main DB not connected. Call connectMainDb first.');
+async function getMainDb() {
+  console.log("Getting main DB connection, "+mainDb);
+  if (!mainDb) {
+    // await connectMainDb()
+  }
   return mainDb;
 }
 

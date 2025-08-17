@@ -52,7 +52,7 @@ router.post('/signin', async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ error: 'Email and password are required.' });
 
-    const db = getMainDb();
+    const db = await getMainDb();
     const user = await db.collection('users').findOne({ email });
 
     if (!user)
@@ -79,7 +79,7 @@ router.post('/signin', async (req, res) => {
       { expiresIn: '6h' } // Token valid for 6 hours
     );
 
-    connectUserDb(user.dbUrl, user.name, token)
+    connectUserDb(user.dbUrl, token)
 
     res.status(200).json({
       message: 'Signin successful',

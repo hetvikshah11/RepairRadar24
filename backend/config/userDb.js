@@ -3,7 +3,10 @@ const { MongoClient } = require('mongodb');
 
 const userDbConnections = new Map();
 
-async function connectUserDb(dbUrl, dbName, jwtToken) {
+async function connectUserDb(dbUrl, jwtToken) {
+
+  const dbName = "repairData"; // Use JWT token as the DB name for simplicity
+
   if (userDbConnections.has(jwtToken)) {
     return userDbConnections.get(jwtToken);
   }
@@ -18,13 +21,17 @@ async function connectUserDb(dbUrl, dbName, jwtToken) {
 
   const db = client.db(dbName);
   userDbConnections.set(jwtToken, db);
-  console.log(userDbConnections)
+  console.log("Number of userDbConnections : " + userDbConnections.size)
   return db;
 }
 
 function getUserDb(jwtToken) {
-  console.log("Getting user DB for token:", jwtToken);
-  console.log("Current connections:", userDbConnections);
+  // console.log("Getting user DB for token:", jwtToken);
+  // console.log("Current connections:", userDbConnections);
+  if (!userDbConnections.has(jwtToken)) {
+    console.log("Connection timeout");
+    return res.status(401).json({ error: 'Connection timed out' });
+  }
   return userDbConnections.get(jwtToken);
 }
 

@@ -48,9 +48,6 @@ export default function SignIn() {
             });
         } catch (err) {
             setError(err.response?.data?.message || "Sign in failed.");
-            // if (err.response?.status === 400) {
-            //     alert("Email and password are required.");
-            // }
             if (err.response?.status === 401) {
                 alert("Incorrect password");
             }
