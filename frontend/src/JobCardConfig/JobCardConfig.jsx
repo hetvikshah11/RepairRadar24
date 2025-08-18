@@ -137,6 +137,26 @@ export default function JobCardConfigRecursive() {
       alert("You need to be logged in to access this page.");
       navigate("/");
     }
+    else {
+      api.get("/user/get-config", { headers: { authorization: `Bearer ${token}` } })
+        .then((resp) => {
+          if (resp.status === 200) {
+            setFields(resp.data.schema || []);
+          }
+          else if (resp.status === 204) {
+            console.log("No configuration found, starting with empty fields.");
+          }
+        })
+        .catch((err) => {
+          if (err.response && err.response.status === 401) {
+            alert("Unauthorized. Please log in again.");
+            navigate("/");
+          } else {
+            console.error("Error fetching configuration:", err);
+            alert("Failed to load configuration. Please try again.");
+          }
+        });
+    }
   }, []);
 
   const saveConfig = async () => {

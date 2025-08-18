@@ -21,9 +21,9 @@ router.get('/my-data', authenticateAndGetUserDb, async (req, res) => {
 });
 
 // POST /save-config
-router.post("/save-config",authenticateAndGetUserDb, async (req, res) => {
+router.post("/save-config", authenticateAndGetUserDb, async (req, res) => {
   console.log(req);
-  
+
   const { schema } = req.body;
   const userId = req.user.userId; // from auth middleware
 
@@ -49,6 +49,25 @@ router.post("/save-config",authenticateAndGetUserDb, async (req, res) => {
   );
 
   res.status(200).json({ message: "Configuration saved successfully!" });
+});
+
+router.get("/get-config", authenticateAndGetUserDb, async (req, res) => {
+  const userId = req.user.userId; // from auth middleware
+
+  const userDbConnection = await getUserDb(req.token);
+  if (!userDbConnection) {
+    console.log("User not found in cached backend map");
+    return res.status(401).json({ error: 'Connection timed out' });
+  }
+
+  // Fetch schema from user DB
+  const config = await userDbConnection.collection("settings").findOne({ schemaType: "jobCard" });
+
+  if (!config) {
+    return res.status(204).json({ error: 'Configuration not found' });
+  }
+
+  res.status(200).json(config);
 });
 
 module.exports = router;
