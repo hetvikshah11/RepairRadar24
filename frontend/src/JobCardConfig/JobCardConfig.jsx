@@ -11,7 +11,7 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
   const addField = () => {
     setFields([
       ...fields,
-      { name: "", key: "", type: "text", options: [], fields: [] }
+      { name: "", key: "", type: "text", options: [], fields: [] },
     ]);
   };
 
@@ -22,29 +22,39 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
     if (key === "name") {
       updated[index].key = generateKey(value);
     }
-
     if (key === "type" && value !== "dropdown" && value !== "list") {
       updated[index].options = [];
     }
     if (key === "type" && value !== "list") {
       updated[index].fields = [];
     }
+
     setFields(updated);
   };
 
   const addOption = (index) => {
     const updated = [...fields];
-    updated[index].options.push("");
+    updated[index].options.push({ value: "", displayByDefault: false });
     setFields(updated);
   };
 
   const updateOption = (fieldIndex, optIndex, value) => {
     const updated = [...fields];
-    updated[fieldIndex].options[optIndex] = value;
+    updated[fieldIndex].options[optIndex].value = value;
+    setFields(updated);
+  };
+
+  const toggleDisplayDefault = (fieldIndex, optIndex, checked) => {
+    const updated = [...fields];
+    updated[fieldIndex].options[optIndex].displayByDefault = checked;
     setFields(updated);
   };
 
   const removeField = (index) => {
+    if (fields[index].nonRemovable) {
+      alert("This field cannot be removed.");
+      return;
+    }
     setFields(fields.filter((_, i) => i !== index));
   };
 
@@ -59,11 +69,13 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
               placeholder="Field Name"
               value={field.name}
               onChange={(e) => updateField(index, "name", e.target.value)}
+              disabled={field.nonRemovable}
             />
             <select
               className="field-select"
               value={field.type}
               onChange={(e) => updateField(index, "type", e.target.value)}
+              disabled={field.nonRemovable}
             >
               <option value="text">Text</option>
               <option value="number">Number</option>
@@ -77,11 +89,13 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
               type="button"
               className="remove-btn"
               onClick={() => removeField(index)}
+              disabled={field.nonRemovable}
             >
               Remove
             </button>
           </div>
 
+          {/* Dropdown Options */}
           {field.type === "dropdown" && (
             <div className="options-section">
               <button
@@ -92,18 +106,40 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
                 + Add Option
               </button>
               {field.options.map((opt, optIndex) => (
-                <input
-                  key={optIndex}
-                  type="text"
-                  className="option-input"
-                  placeholder={`Option ${optIndex + 1}`}
-                  value={opt}
-                  onChange={(e) => updateOption(index, optIndex, e.target.value)}
-                />
+                <div key={optIndex} className="option-row">
+                  <input
+                    type="text"
+                    className="option-input"
+                    placeholder={`Option ${optIndex + 1}`}
+                    value={opt.value}
+                    onChange={(e) =>
+                      updateOption(index, optIndex, e.target.value)
+                    }
+                  />
+                  {field.key === "job_status" && (
+                    <label className="display-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={opt.displayByDefault}
+                        onChange={(e) =>
+                          toggleDisplayDefault(index, optIndex, e.target.checked)
+                        }
+                      />
+                      Display by default
+                    </label>
+                  )}
+                </div>
               ))}
+              {field.key === "job_status" && (
+                <p className="info-text">
+                  ⚠️ This field controls whether a job card appears on your
+                  dashboard.
+                </p>
+              )}
             </div>
           )}
 
+          {/* List Subfields */}
           {field.type === "list" && (
             <div className="subfields-section">
               <h5 className="subfields-title">Subfields for "{field.name}"</h5>
@@ -127,7 +163,7 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
   );
 };
 
-export default function JobCardConfigRecursive() {
+export default function JobCardConfig() {
   const [fields, setFields] = useState([]);
   const navigate = useNavigate();
 
@@ -136,15 +172,66 @@ export default function JobCardConfigRecursive() {
     if (!token) {
       alert("You need to be logged in to access this page.");
       navigate("/");
-    }
-    else {
-      api.get("/user/get-config", { headers: { authorization: `Bearer ${token}` } })
+    } else {
+      api
+        .get("/user/get-config", {
+          headers: { authorization: `Bearer ${token}` },
+        })
         .then((resp) => {
           if (resp.status === 200) {
-            setFields(resp.data.schema || []);
-          }
-          else if (resp.status === 204) {
-            console.log("No configuration found, starting with empty fields.");
+            let schema = resp.data.schema || [];
+
+            // Ensure jobNo exists
+            if (!schema.find((f) => f.key === "job_no")) {
+              schema.unshift({
+                name: "Job No",
+                key: "job_no",
+                type: "number",
+                autoIncrement: true,
+                nonRemovable: true,
+              });
+            }
+
+            // Ensure jobStatus exists
+            if (!schema.find((f) => f.key === "job_status")) {
+              schema.push({
+                name: "Job Status",
+                key: "job_status",
+                type: "dropdown",
+                options: [
+                  { value: "Pending", displayByDefault: true },
+                  { value: "In Progress", displayByDefault: false },
+                  { value: "Completed", displayByDefault: false },
+                ],
+                nonRemovable: true,
+                isCompletionField: true,
+              });
+            }
+
+            setFields(schema);
+          } else if (resp.status === 204) {
+            console.log("No configuration found, starting with defaults.");
+            setFields([
+              {
+                name: "Job No",
+                key: "job_no",
+                type: "number",
+                autoIncrement: true,
+                nonRemovable: true,
+              },
+              {
+                name: "Job Status",
+                key: "job_status",
+                type: "dropdown",
+                options: [
+                  { value: "Pending", displayByDefault: true },
+                  { value: "In Progress", displayByDefault: false },
+                  { value: "Completed", displayByDefault: false },
+                ],
+                nonRemovable: true,
+                isCompletionField: true,
+              },
+            ]);
           }
         })
         .catch((err) => {
@@ -157,7 +244,7 @@ export default function JobCardConfigRecursive() {
           }
         });
     }
-  }, []);
+  }, [navigate]);
 
   const saveConfig = async () => {
     const token = sessionStorage.getItem("token");
