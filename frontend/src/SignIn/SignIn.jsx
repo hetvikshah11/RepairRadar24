@@ -38,6 +38,7 @@ export default function SignIn() {
                 if (resp.status === 200) {
                     alert("Welcome " + resp.data.user.name);
                     sessionStorage.setItem("token", resp.data.token);
+                    sessionStorage.setItem("userName", resp.data.user.name);
                     if (!resp.data.schemaConfigured) {
                         navigate("/config");
                     }

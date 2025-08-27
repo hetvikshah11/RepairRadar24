@@ -70,4 +70,30 @@ router.get("/get-config", authenticateAndGetUserDb, async (req, res) => {
   res.status(200).json(config);
 });
 
+// routes/user.js
+router.get("/jobs", authenticateAndGetUserDb, async (req, res) => {
+  try {
+    const { page = 1, limit = 6 } = req.query;
+    const db = req.userDb; // ✅ your middleware attaches correct tenant DB
+
+    const jobs = await db
+      .collection("jobs")
+      .find({})
+      .skip((page - 1) * parseInt(limit))
+      .limit(parseInt(limit))
+      .toArray();
+
+    const total = await db.collection("jobs").countDocuments();
+
+    res.json({
+      jobs,
+      hasMore: page * limit < total,
+    });
+  } catch (err) {
+    console.error("Error fetching jobs:", err);
+    res.status(500).json({ message: "Failed to fetch jobs" });
+  }
+});
+
+
 module.exports = router;
