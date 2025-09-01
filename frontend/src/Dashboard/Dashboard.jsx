@@ -28,19 +28,19 @@ export default function Dashboard() {
     }
 
     // Fetch user profile
-      api
-        .get("user/jobs/count", {
-          headers: { authorization: `Bearer ${token}` },
-        })
-        .then((res) => {
-          if (res.data)
-            alert(`You have ${res.data.total} jobs in total.`);
-        })
-        .catch(() => navigate("/"));
+    api
+      .get("user/jobs/count", {
+        headers: { authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        if (res.data)
+          alert(`You have ${res.data.total} jobs in total.`);
+      })
+      .catch(() => navigate("/"));
 
-      // First page jobs
-      fetchJobs(1);
-    }, [navigate]);
+    // First page jobs
+    fetchJobs(1);
+  }, [navigate]);
 
   const fetchJobs = async (pageNum) => {
     // setLoading(true);

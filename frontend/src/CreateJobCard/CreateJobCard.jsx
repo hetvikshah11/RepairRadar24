@@ -41,6 +41,11 @@ export default function CreateJobCard() {
         }
       })
       .catch((err) => {
+        if (err.response && err.response.status === 401) {
+          alert("Session expired. Please log in again.");
+          navigate("/");
+          return;
+        }
         console.error("Schema fetch failed", err);
         alert("Could not load schema.");
       })
@@ -79,21 +84,26 @@ export default function CreateJobCard() {
 
   // ✅ Save job to database
   const handleSave = async () => {
-  const token = sessionStorage.getItem("token");
-  try {
-    const payload = { ...formData };
+    const token = sessionStorage.getItem("token");
+    try {
+      const payload = { ...formData };
 
-    await api.post("/user/jobs/savejobcard", payload, {
-      headers: { authorization: `Bearer ${token}` },
-    });
+      await api.post("/user/jobs/savejobcard", payload, {
+        headers: { authorization: `Bearer ${token}` },
+      });
 
-    alert("Job created successfully!");
-    navigate("/dashboard");
-  } catch (err) {
-    console.error("Job save failed:", err);
-    alert("Could not save job.");
-  }
-};
+      alert("Job created successfully!");
+      navigate("/dashboard");
+    } catch (err) {
+      if (err.response && err.response.status === 401) {
+        alert("Session expired. Please log in again.");
+        navigate("/");
+        return;
+      }
+      console.error("Job save failed:", err);
+      alert("Could not save job.");
+    }
+  };
 
 
   if (loading) return <div className="loading">Loading...</div>;

@@ -24,7 +24,7 @@ async function connectMainDb() {
 }
 
 async function getMainDb() {
-  console.log("Getting main DB connection, "+mainDb);
+  console.log("Getting main DB connection, " + mainDb);
   if (!mainDb) {
     await connectMainDb()
   }

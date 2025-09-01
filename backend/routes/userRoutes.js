@@ -60,6 +60,11 @@ router.get("/get-config", authenticateAndGetUserDb, async (req, res) => {
     return res.status(401).json({ error: 'Connection timed out' });
   }
 
+  if (!userDbConnection) {
+    console.log("User not found in cached backend map");
+    return res.status(401).json({ error: 'Connection timed out' });
+  }
+
   // Fetch schema from user DB
   const config = await userDbConnection.collection("settings").findOne({ schemaType: "jobCard" });
 
@@ -72,8 +77,13 @@ router.get("/get-config", authenticateAndGetUserDb, async (req, res) => {
 
 router.get("/jobs/count", authenticateAndGetUserDb, async (req, res) => {
   try {
-    const userDb = await getUserDb(req.token);
-    const total = await userDb.collection("jobs").countDocuments({});
+    const userDbConnection = await getUserDb(req.token);
+    if (!userDbConnection) {
+      console.log("User not found in cached backend map");
+      return res.status(401).json({ error: 'Connection timed out' });
+    }
+
+    const total = await userDbConnection.collection("jobs").countDocuments({});
     console.log("Total jobs count:", total);
     return res.status(200).json({ total });
   } catch (err) {
@@ -84,13 +94,17 @@ router.get("/jobs/count", authenticateAndGetUserDb, async (req, res) => {
 
 router.get("/jobs/list", authenticateAndGetUserDb, async (req, res) => {
   try {
-    const userDb = await getUserDb(req.user.userId);
+    const userDbConnection = await getUserDb(req.token);
+    if (!userDbConnection) {
+      console.log("User not found in cached backend map");
+      return res.status(401).json({ error: 'Connection timed out' });
+    }
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const jobs = await userDb
+    const jobs = await userDbConnection
       .collection("jobs")
       .find({})
       .skip(skip)
@@ -106,8 +120,13 @@ router.get("/jobs/list", authenticateAndGetUserDb, async (req, res) => {
 
 router.post("/jobs/savejobcard", authenticateAndGetUserDb, async (req, res) => {
   try {
-    const userDb = await getUserDb(req.token); // connect to the user's DB
-    const jobsCollection = userDb.collection("jobs");
+    const userDbConnection = await getUserDb(req.token);
+    if (!userDbConnection) {
+      console.log("User not found in cached backend map");
+      return res.status(401).json({ error: 'Connection timed out' });
+    }
+    
+    const jobsCollection = userDbConnection.collection("jobs");
 
     const newJob = req.body;
 
