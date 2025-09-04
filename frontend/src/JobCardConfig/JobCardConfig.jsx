@@ -9,10 +9,19 @@ const generateKey = (name) => {
 
 const FieldConfig = ({ fields, setFields, level = 0 }) => {
   const addField = () => {
-    setFields([
-      ...fields,
-      { name: "", key: "", type: "text", options: [], fields: [] }
-    ]);
+    const newField = { name: "", key: "", type: "text", options: [], fields: [] };
+
+    // Ensure job_no first and jobcard_status last
+    const jobNo = fields.find(f => f.key === "job_no");
+    const jobStatus = fields.find(f => f.key === "jobcard_status");
+    const middleFields = fields.filter(
+      f => f.key !== "job_no" && f.key !== "jobcard_status"
+    );
+
+    // Insert new field in the middle
+    const updated = [jobNo, ...middleFields, newField, jobStatus].filter(Boolean);
+
+    setFields(updated);
   };
 
   const updateField = (index, key, value) => {
@@ -98,206 +107,206 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
             </button>
           </div>
 
-          
-            {field.type === "dropdown" && (
-              <div className="options-section">
-                <button
-                  type="button"
-                  className="add-option-btn"
-                  onClick={() => addOption(index)}
-                >
-                  + Add Option
-                </button>
 
-                {field.options.map((opt, optIndex) => (
-                  <div key={optIndex} className="option-row">
-                    <input
-                      type="text"
-                      className="option-input"
-                      placeholder={`Option ${optIndex + 1}`}
-                      value={opt.value}
-                      onChange={(e) =>
-                        updateOption(index, optIndex, "value", e.target.value)
-                      }
-                    />
-                    {field.key === "jobcard_status" && (
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={opt.displayByDefault}
-                          onChange={(e) =>
-                            updateOption(
-                              index,
-                              optIndex,
-                              "displayByDefault",
-                              e.target.checked
-                            )
-                          }
-                        />
-                        Display by Default
-                      </label>
-                    )}
-                    <button
-                      type="button"
-                      className="remove-option-btn"
-                      onClick={() => removeOption(index, optIndex)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+          {field.type === "dropdown" && (
+            <div className="options-section">
+              <button
+                type="button"
+                className="add-option-btn"
+                onClick={() => addOption(index)}
+              >
+                + Add Option
+              </button>
 
-            {field.type === "list" && (
-              <div className="subfields-section">
-                <h5 className="subfields-title">Subfields for "{field.name}"</h5>
-                <FieldConfig
-                  fields={field.fields}
-                  setFields={(newSubfields) => {
-                    const updated = [...fields];
-                    updated[index].fields = newSubfields;
-                    setFields(updated);
-                  }}
-                  level={level + 1}
-                />
-              </div>
-            )}
+              {field.options.map((opt, optIndex) => (
+                <div key={optIndex} className="option-row">
+                  <input
+                    type="text"
+                    className="option-input"
+                    placeholder={`Option ${optIndex + 1}`}
+                    value={opt.value}
+                    onChange={(e) =>
+                      updateOption(index, optIndex, "value", e.target.value)
+                    }
+                  />
+                  {field.key === "jobcard_status" && (
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={opt.displayByDefault}
+                        onChange={(e) =>
+                          updateOption(
+                            index,
+                            optIndex,
+                            "displayByDefault",
+                            e.target.checked
+                          )
+                        }
+                      />
+                      Display by Default
+                    </label>
+                  )}
+                  <button
+                    type="button"
+                    className="remove-option-btn"
+                    onClick={() => removeOption(index, optIndex)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
-            {field.key === "jobcard_status" && (
-              <p className="status-hint">
-                ⚠️ This field decides which jobcards are shown on the dashboard.
-                Jobs with statuses marked as <b>Display by Default</b> will appear.
-              </p>
-            )}
-          </div>
-        
+          {field.type === "list" && (
+            <div className="subfields-section">
+              <h5 className="subfields-title">Subfields for "{field.name}"</h5>
+              <FieldConfig
+                fields={field.fields}
+                setFields={(newSubfields) => {
+                  const updated = [...fields];
+                  updated[index].fields = newSubfields;
+                  setFields(updated);
+                }}
+                level={level + 1}
+              />
+            </div>
+          )}
+
+          {field.key === "jobcard_status" && (
+            <p className="status-hint">
+              ⚠️ This field decides which jobcards are shown on the dashboard.
+              Jobs with statuses marked as <b>Display by Default</b> will appear.
+            </p>
+          )}
+        </div>
+
       ))}
 
-          <button type="button" className="add-field-btn" onClick={addField}>
-            + Add Field
-          </button>
-        </div>
-      );
+      <button type="button" className="add-field-btn" onClick={addField}>
+        + Add Field
+      </button>
+    </div>
+  );
 };
 
-      export default function JobCardConfig() {
+export default function JobCardConfig() {
   const [fields, setFields] = useState([]);
-      const navigate = useNavigate();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = sessionStorage.getItem("token");
-      if (!token) {
-        alert("You need to be logged in to access this page.");
+    if (!token) {
+      alert("You need to be logged in to access this page.");
       navigate("/");
     } else {
-        api
-          .get("/user/get-config", {
-            headers: { authorization: `Bearer ${token}` },
-          })
-          .then((resp) => {
-            if (resp.status === 200) {
-              let schema = resp.data.schema || [];
+      api
+        .get("/user/get-config", {
+          headers: { authorization: `Bearer ${token}` },
+        })
+        .then((resp) => {
+          if (resp.status === 200) {
+            let schema = resp.data.schema || [];
 
-              console.log("Fetched configuration:", schema);
+            console.log("Fetched configuration:", schema);
 
-              // ensure mandatory fields exist
-              if (!schema.some((f) => f.key === "job_no")) {
-                schema.unshift({
-                  name: "Job Number",
-                  key: "job_no",
-                  type: "number",
-                  options: [],
-                  fields: [],
-                });
-              }
-
-              if (!schema.some((f) => f.key === "jobcard_status")) {
-                schema.push({
-                  name: "Jobcard Status",
-                  key: "jobcard_status",
-                  type: "dropdown",
-                  options: [
-                    { value: "Pending", displayByDefault: true },
-                    { value: "In Progress", displayByDefault: false },
-                    { value: "Completed", displayByDefault: false },
-                  ],
-                  fields: [],
-                });
-              }
-
-              setFields(schema);
-            } else if (resp.status === 204) {
-              console.log("No configuration found, starting with defaults.");
-              setFields([
-                {
-                  name: "Job Number",
-                  key: "job_no",
-                  type: "number",
-                  options: [],
-                  fields: [],
-                },
-                {
-                  name: "Jobcard Status",
-                  key: "jobcard_status",
-                  type: "dropdown",
-                  options: [
-                    { value: "Pending", displayByDefault: true },
-                    { value: "In Progress", displayByDefault: false },
-                    { value: "Completed", displayByDefault: false },
-                  ],
-                  fields: [],
-                },
-              ]);
+            // ensure mandatory fields exist
+            if (!schema.some((f) => f.key === "job_no")) {
+              schema.unshift({
+                name: "Job Number",
+                key: "job_no",
+                type: "number",
+                options: [],
+                fields: [],
+              });
             }
-          })
-          .catch((err) => {
-            if (err.response && err.response.status === 401) {
-              alert("Unauthorized. Please log in again.");
-              navigate("/");
-            } else {
-              console.error("Error fetching configuration:", err);
-              alert("Failed to load configuration. Please try again.");
+
+            if (!schema.some((f) => f.key === "jobcard_status")) {
+              schema.push({
+                name: "Jobcard Status",
+                key: "jobcard_status",
+                type: "dropdown",
+                options: [
+                  { value: "Pending", displayByDefault: true },
+                  { value: "In Progress", displayByDefault: false },
+                  { value: "Completed", displayByDefault: false },
+                ],
+                fields: [],
+              });
             }
-          });
+
+            setFields(schema);
+          } else if (resp.status === 204) {
+            console.log("No configuration found, starting with defaults.");
+            setFields([
+              {
+                name: "Job Number",
+                key: "job_no",
+                type: "number",
+                options: [],
+                fields: [],
+              },
+              {
+                name: "Jobcard Status",
+                key: "jobcard_status",
+                type: "dropdown",
+                options: [
+                  { value: "Pending", displayByDefault: true },
+                  { value: "In Progress", displayByDefault: false },
+                  { value: "Completed", displayByDefault: false },
+                ],
+                fields: [],
+              },
+            ]);
+          }
+        })
+        .catch((err) => {
+          if (err.response && err.response.status === 401) {
+            alert("Unauthorized. Please log in again.");
+            navigate("/");
+          } else {
+            console.error("Error fetching configuration:", err);
+            alert("Failed to load configuration. Please try again.");
+          }
+        });
     }
   }, []);
 
   const saveConfig = async () => {
     const token = sessionStorage.getItem("token");
-      console.log("Saving configuration:", fields);
-      await api
+    console.log("Saving configuration:", fields);
+    await api
       .post(
-      "/user/save-config",
-      {schema: fields },
-      {headers: {authorization: `Bearer ${token}` } }
+        "/user/save-config",
+        { schema: fields },
+        { headers: { authorization: `Bearer ${token}` } }
       )
       .then((resp) => {
         if (resp.status === 200) {
-        alert(resp.data.message);
-      navigate("/dashboard");
+          alert(resp.data.message);
+          navigate("/dashboard");
         }
       })
       .catch((err) => {
         if (err.status === 401) {
-        alert("Unauthorized. Please log in again.");
-      navigate("/");
-      return;
+          alert("Unauthorized. Please log in again.");
+          navigate("/");
+          return;
         } else {
-        console.error("Error saving configuration:", err);
-      alert("Failed to save configuration. Please try again.");
+          console.error("Error saving configuration:", err);
+          alert("Failed to save configuration. Please try again.");
         }
       });
   };
 
-      return (
-      <div className="jobcard-container">
-        <h2 className="title">Configure Job Card</h2>
-        <FieldConfig fields={fields} setFields={setFields} />
-        <br />
-        <button onClick={saveConfig} className="save-btn">
-          Save Configuration
-        </button>
-      </div>
-      );
+  return (
+    <div className="jobcard-container">
+      <h2 className="title">Configure Job Card</h2>
+      <FieldConfig fields={fields} setFields={setFields} />
+      <br />
+      <button onClick={saveConfig} className="save-btn">
+        Save Configuration
+      </button>
+    </div>
+  );
 }
