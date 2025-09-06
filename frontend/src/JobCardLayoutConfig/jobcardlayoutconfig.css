@@ -1,0 +1,164 @@
+.layout-config-container {
+  min-width: 100vw;              /* Full viewport width */
+  min-height: 100vh;         /* Full viewport height */
+  padding: 20px;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f4f6f9;
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #333;
+}
+
+/* Full width layout using flex */
+.config-sections {
+  display: flex;
+  width: 100%;
+  flex: 1;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Force both sections to share width equally */
+.preview-section,
+.fields-section {
+  flex: 0 0 50%;             /* Each takes 50%, no shrink */
+  max-width: 50%;            /* Don't exceed half */
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 20px;
+  min-height: 500px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;          /* Prevent content overflow */
+}
+
+/* Stack them on small devices */
+@media (max-width: 1024px) {
+  .config-sections {
+    flex-direction: column;
+  }
+  .preview-section,
+  .fields-section {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+.section-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+  font-weight: 500;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 6px;
+}
+
+/* Card Preview */
+.card-preview {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 15px;
+  background: #fafafa;
+  min-height: 220px;
+  word-wrap: break-word;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.preview-line {
+  margin: 6px 0;
+}
+
+/* Editor box */
+.layout-editor {
+  width: 100%;
+  min-height: 200px;
+  font-family: monospace;
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #bbb;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+/* Field hierarchy */
+.field-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.field-item {
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #fdfdfd;
+}
+
+.field-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.field-btn,
+.subfield-btn {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  /* transition: background 0.2s; */
+}
+
+.field-btn:hover,
+.subfield-btn:hover {
+  background: #0056b3;
+}
+
+.subfield-list {
+  margin-top: 8px;
+  margin-left: 18px;
+  list-style: none;
+  padding-left: 0;
+  border-left: 2px dashed #ddd;
+  padding-left: 12px;
+}
+
+.subfield-item {
+  margin-bottom: 10px;
+}
+
+.save-btn {
+  margin-top: 30px;
+  padding: 14px 28px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  align-self: center;
+  font-size: 16px;
+  font-weight: 500;
+  /* transition: background 0.2s; */
+}
+
+.save-btn:hover {
+  background: #1e7e34;
+}
