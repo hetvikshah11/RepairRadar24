@@ -176,7 +176,7 @@ router.post("/jobs/savejobcard", authenticateAndGetUserDb, async (req, res) => {
     );
     const nextJobNo = lastJob ? lastJob.jobNo + 1 : 1;
 
-    newJob.jobNo = nextJobNo;
+    newJob.job_no = nextJobNo;
     newJob.createdAt = new Date();
 
     await jobsCollection.insertOne(newJob);

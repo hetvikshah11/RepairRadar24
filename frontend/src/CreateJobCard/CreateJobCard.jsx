@@ -20,7 +20,7 @@ import "./createjobcard.css";
 export default function CreateJobCard() {
   const navigate = useNavigate();
   const [schema, setSchema] = useState([]);
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState({ "job_no": "", "jobcard_status": "" });
   const [loading, setLoading] = useState(true);
 
   // ✅ On load, check token + fetch schema
@@ -38,6 +38,9 @@ export default function CreateJobCard() {
       .then((res) => {
         if (res.data && res.data.schema) {
           setSchema(res.data.schema);
+          setFormData((prev) => {
+            return { ...prev, "jobcard_status": res.data.schema.find(f => f.key === "jobcard_status")?.options[0]?.value || "" }
+          })
         }
       })
       .catch((err) => {
