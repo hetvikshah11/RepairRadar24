@@ -192,5 +192,78 @@ router.post("/jobs/savejobcard", authenticateAndGetUserDb, async (req, res) => {
   }
 });
 
+router.get("/get-job-layout-config", authenticateAndGetUserDb, async (req, res) => {
+  try {
+    const userDbConnection = await getUserDb(req.token);
+    if (!userDbConnection) {
+      console.log("User not found in cached backend map");
+      return res.status(401).json({ error: 'Connection timed out' });
+    }
+
+    const configCollection = userDbConnection.collection("job_layout_config");
+
+    const layoutType = req.query.layoutType;
+
+    // we expect only 1 doc for each user
+    const config = await configCollection.findOne({ layoutType });
+
+    if (!config) {
+      return res.status(204).send(); // no config saved yet
+    }
+
+    return res.status(200).json({
+      success: true,
+      layout: config.layout || "",
+    });
+  } catch (err) {
+    console.error("Error fetching dashboard layout config:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch dashboard layout config",
+    });
+  }
+});
+
+router.post("/save-job-layout-config", authenticateAndGetUserDb, async (req, res) => {
+  try {
+    const userDbConnection = await getUserDb(req.token);
+    if (!userDbConnection) {
+      console.log("User not found in cached backend map");
+      return res.status(401).json({ error: 'Connection timed out' });
+    }
+
+    const { layoutType, layout } = req.body;
+
+    if (!layout || typeof layout !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Layout string is required",
+      });
+    }
+
+    const configCollection = userDbConnection.collection("job_layout_config");
+
+    // Save or update config (only 1 document per tenant/user DB)
+    await configCollection.updateOne(
+      { layoutType }, // filter by type
+      { $set: { layout, updatedAt: new Date() } },
+      { upsert: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Job layout configuration saved successfully",
+    });
+  } catch (err) {
+    console.error("Error saving job layout config:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to save job layout configuration",
+    });
+  }
+});
+
+
+
 
 module.exports = router;

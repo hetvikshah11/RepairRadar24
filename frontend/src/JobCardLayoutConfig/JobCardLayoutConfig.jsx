@@ -28,16 +28,22 @@ export default function JobCardLayoutConfig() {
                     setSchema(resSchema.data.schema);
                 }
 
+                const layoutType = "dashboardJobLayout";
                 // fetch display config
-                const resDisplay = await api.get("/user/get-display-config", {
+                const resDisplay = await api.get(`/user/get-job-layout-config?layoutType=${layoutType}`, {
                     headers: { authorization: `Bearer ${token}` },
                 });
-                if (resDisplay.data && resDisplay.data.layout) {
-                    setLayout(resDisplay.data.layout);
+                if (resDisplay.status === 200) {
+                    if (resDisplay.data && resDisplay.data.layout) {
+                        setLayout(resDisplay.data.layout);
+                    }
                 }
             } catch (err) {
                 console.error("Error fetching configs", err);
                 alert("Could not load configuration.");
+                if (err.response.status === 401) {
+                    navigate("/");
+                }
             } finally {
                 setLoading(false);
             }
@@ -54,7 +60,23 @@ export default function JobCardLayoutConfig() {
         } else {
             insertText = `<${fieldKey}>`;
         }
-        setLayout((prev) => prev + insertText);
+
+        // Find the textarea (or input) reference
+        const textarea = document.getElementById("layoutEditor"); // give your textarea an id
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        setLayout((prev) => {
+            return prev.substring(0, start) + insertText + prev.substring(end);
+        });
+
+        // set cursor right after the inserted field
+        setTimeout(() => {
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
+        }, 0);
     };
 
     // ✅ Save layout config
@@ -62,8 +84,8 @@ export default function JobCardLayoutConfig() {
         const token = sessionStorage.getItem("token");
         try {
             await api.post(
-                "/user/save-display-config",
-                { layout },
+                "/user/save-job-layout-config",
+                { layoutType: "dashboardJobLayout", layout },
                 { headers: { authorization: `Bearer ${token}` } }
             );
             alert("Layout configuration saved!");
@@ -92,9 +114,10 @@ export default function JobCardLayoutConfig() {
                     </div>
 
                     <textarea
-                        className="layout-editor"
+                        id="layoutEditor"
                         value={layout}
                         onChange={(e) => setLayout(e.target.value)}
+                        className="layout-editor"
                         placeholder="Type your layout here... use <field_key> for fields, \n for new lines"
                     />
                 </div>
