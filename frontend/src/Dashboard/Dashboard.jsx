@@ -20,24 +20,51 @@ export default function Dashboard() {
   const userName = sessionStorage.getItem("userName");
 
   // 🟢 Utility to render layout for each job
-  const renderLayout = (job) => {
-    if (!layout) return "No layout configured";
+  function renderLayout(job) {
+  if (!layout) return null;
 
-    return layout.replace(/<([^>]+)>/g, (_, fieldKey) => {
-      // handle nested like field.subField
-      if (fieldKey.includes(".")) {
-        const [parent, child] = fieldKey.split(".");
-        if (Array.isArray(job[parent])) {
-          return job[parent]
-            .map((item) => (item[child] !== undefined ? item[child] : ""))
-            .join(", ");
+  const lines = layout.split("\n");
+
+  return (
+    <>
+      {lines.map((line, idx) => {
+        // if line contains a list placeholder like <items.something>
+        if (line.includes("<items.")) {
+          const listField = "items"; // adjust if you have multiple lists
+          const listData = job[listField] || [];
+
+          return (
+            <div key={idx}>
+              {listData.length === 0 ? (
+                <p>-</p>
+              ) : (
+                listData.map((row, rIdx) => {
+                  // replace each <items.subfield> with row[subfield]
+                  const replaced = line.replace(/<items\.([^>]+)>/g, (_, subKey) => {
+                    return row[subKey] ?? "-";
+                  });
+                  return <p key={rIdx}>{replaced}</p>;
+                })
+              )}
+            </div>
+          );
         }
-        return "";
-      }
 
-      return job[fieldKey] !== undefined ? job[fieldKey] : "";
-    });
-  };
+        // normal (non-list) line
+        const replacedLine = line.replace(/<([^>]+)>/g, (_, key) => {
+          const keys = key.split(".");
+          let value = job;
+          for (let k of keys) value = value ? value[k] : null;
+          return value ?? "-";
+        });
+
+        return <p key={idx}>{replacedLine}</p>;
+      })}
+    </>
+  );
+}
+
+
 
   // 🟢 Initial Load
   useEffect(() => {
@@ -54,13 +81,13 @@ export default function Dashboard() {
           headers: { authorization: `Bearer ${token}` },
         });
         console.log(schemaRes.data);
-        
+
         const layoutType = "dashboardJobLayout";
         const layoutRes = await api.get(`/user/get-job-layout-config?layoutType=${layoutType}`, {
           headers: { authorization: `Bearer ${token}` },
         });
         console.log(layoutRes.data);
-        
+
         const countRes = await api.get("/user/jobs/count", {
           headers: { authorization: `Bearer ${token}` },
         });
@@ -161,11 +188,7 @@ export default function Dashboard() {
         {jobs.length > 0 ? (
           jobs.map((job) => (
             <div key={job._id} className="job-card">
-              {renderLayout(job)
-                .split("\n")
-                .map((line, idx) => (
-                  <p key={idx}>{line}</p>
-                ))}
+              {renderLayout(job)} {/* no split here */}
               <button
                 onClick={() => navigate(`/job/${job._id}`)}
                 className="view-btn"
