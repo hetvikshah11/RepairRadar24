@@ -20,10 +20,13 @@ import "./createjobcard.css";
 export default function CreateJobCard() {
   const navigate = useNavigate();
   const [schema, setSchema] = useState([]);
-  const [formData, setFormData] = useState({ "job_no": "", "jobcard_status": "" });
+  const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // ✅ On load, check token + fetch schema
+  // for right panel (sublist display)
+  const [activeSublist, setActiveSublist] = useState(null);
+
+  // ✅ Fetch schema
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     if (!token) {
@@ -32,19 +35,32 @@ export default function CreateJobCard() {
       return;
     }
 
-    api.get("/user/get-config", {
-      headers: { authorization: `Bearer ${token}` },
-    })
+    api
+      .get("/user/get-config", {
+        headers: { authorization: `Bearer ${token}` },
+      })
       .then((res) => {
         if (res.data && res.data.schema) {
           setSchema(res.data.schema);
-          setFormData((prev) => {
-            return { ...prev, "jobcard_status": res.data.schema.find(f => f.key === "jobcard_status")?.options[0]?.value || "" }
-          })
+
+          // Pre-fill defaults
+          const defaults = {};
+          res.data.schema.forEach((f) => {
+            if (f.type === "dropdown" && f.options?.length) {
+              defaults[f.key] = f.options[0].value;
+            } else if (f.type === "checkbox") {
+              defaults[f.key] = false;
+            } else if (f.type === "list") {
+              defaults[f.key] = [];
+            } else {
+              defaults[f.key] = "";
+            }
+          });
+          setFormData(defaults);
         }
       })
       .catch((err) => {
-        if (err.response && err.response.status === 401) {
+        if (err.response?.status === 401) {
           alert("Session expired. Please log in again.");
           navigate("/");
           return;
@@ -55,50 +71,106 @@ export default function CreateJobCard() {
       .finally(() => setLoading(false));
   }, [navigate]);
 
-  // ✅ Handle input changes
+  // ✅ Update simple fields
   const handleChange = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  // ✅ Handle list-type fields (as a table)
+  // ✅ Handle list field row updates
   const handleListChange = (listKey, rowIndex, colKey, value) => {
-    const currentList = formData[listKey] || [];
-    const updatedList = [...currentList];
+    const updatedList = [...(formData[listKey] || [])];
     updatedList[rowIndex] = { ...updatedList[rowIndex], [colKey]: value };
     setFormData((prev) => ({ ...prev, [listKey]: updatedList }));
   };
 
-  // Add rows in list-type fields
+  // ✅ Add row in list
   const addListRow = (listKey, fields) => {
-    const currentList = formData[listKey] || [];
     const newRow = {};
     fields.forEach((f) => {
-      newRow[f.key] = "";
+      if (f.type === "dropdown" && f.options?.length) {
+        newRow[f.key] = f.options[0].value;
+      } else if (f.type === "checkbox") {
+        newRow[f.key] = false;
+      } else if (f.type === "list") {
+        newRow[f.key] = [];
+      } else {
+        newRow[f.key] = "";
+      }
     });
-    setFormData((prev) => ({ ...prev, [listKey]: [...currentList, newRow] }));
+    setFormData((prev) => ({
+      ...prev,
+      [listKey]: [...(prev[listKey] || []), newRow],
+    }));
   };
 
-  // Remove rows in list-type fields
+  // ✅ Remove row in list
   const removeListRow = (listKey, rowIndex) => {
-    const currentList = formData[listKey] || [];
-    const updated = currentList.filter((_, i) => i !== rowIndex);
+    const updated = (formData[listKey] || []).filter((_, i) => i !== rowIndex);
     setFormData((prev) => ({ ...prev, [listKey]: updated }));
   };
 
-  // ✅ Save job to database
+  // ✅ Render non-list fields
+  const renderSimpleField = (field, value, onChange) => {
+    switch (field.type) {
+      case "text":
+      case "number":
+      case "date":
+        return (
+          <TextField
+            label={field.name}
+            type={field.type === "number" ? "number" : field.type}
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            fullWidth
+            margin="normal"
+            size="small"
+          />
+        );
+
+      case "dropdown":
+        return (
+          <Autocomplete
+            options={field.options || []}
+            value={
+              value
+                ? field.options.find((opt) => opt.value === value) || null
+                : field.options[0] || null
+            }
+            getOptionLabel={(opt) => opt.value || ""}
+            isOptionEqualToValue={(opt, val) => opt.value === val.value}
+            onChange={(_, newVal) =>
+              onChange(newVal ? newVal.value : field.options[0]?.value || "")
+            }
+            renderInput={(params) => (
+              <TextField {...params} label={field.name} margin="normal" fullWidth size="small" />
+            )}
+          />
+        );
+
+      case "checkbox":
+        return (
+          <div className="switch-row">
+            <span>{field.name}</span>
+            <Switch checked={!!value} onChange={(e) => onChange(e.target.checked)} />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // ✅ Save job
   const handleSave = async () => {
     const token = sessionStorage.getItem("token");
     try {
-      const payload = { ...formData };
-
-      await api.post("/user/jobs/savejobcard", payload, {
+      await api.post("/user/jobs/savejobcard", formData, {
         headers: { authorization: `Bearer ${token}` },
       });
-
       alert("Job created successfully!");
       navigate("/dashboard");
     } catch (err) {
-      if (err.response && err.response.status === 401) {
+      if (err.response?.status === 401) {
         alert("Session expired. Please log in again.");
         navigate("/");
         return;
@@ -108,164 +180,204 @@ export default function CreateJobCard() {
     }
   };
 
-
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
-    <div className="create-job-container">
-      <h2 className="title">Create New Job</h2>
+    <div className="split-container">
+      {/* LEFT: basic fields + first-level lists */}
+      <div className="left-panel">
+        <h2 className="title">Create New Job</h2>
+        <div className="fields-grid">
+          {schema.map((field) => {
+            if (field.type !== "list") {
+              return (
+                <div key={field.key} className="field-item">
+                  {renderSimpleField(field, formData[field.key], (val) =>
+                    handleChange(field.key, val)
+                  )}
+                </div>
+              );
+            }
 
-      <div className="fields-grid">
-        {schema.map((field) => {
-          if (field.type === "list") {
-            // Lists span full width
+            // First level list
             return (
               <div key={field.key} className="list-wrapper">
-                {/* List rendering logic */}
-                <div className="list-section">
-                  <h4>{field.name}</h4>
-                  <Paper className="list-table">
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          {field.fields.map((sub) => (
-                            <TableCell key={sub.key}>{sub.name}</TableCell>
-                          ))}
-                          <TableCell>Action</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {(formData[field.key] || []).map((row, rowIndex) => (
-                          <TableRow key={rowIndex}>
-                            {field.fields.map((sub) => (
-                              <TableCell key={sub.key}>
-                                {/* Text & Number */}
-                                {(sub.type === "text" || sub.type === "number" || sub.type === "date") && (
-                                  <TextField
-                                    type={sub.type === "number" ? "number" : sub.type}
-                                    value={row[sub.key] || ""}
-                                    onChange={(e) =>
-                                      handleListChange(field.key, rowIndex, sub.key, e.target.value)
-                                    }
-                                    size="small"
-                                    fullWidth
-                                  />
-                                )}
-
-                                {/* Dropdown */}
-                                {sub.type === "dropdown" && (
-                                  <Autocomplete
-                                    options={sub.options || []}
-                                    value={
-                                      row[sub.key]
-                                        ? sub.options.find((opt) => opt.value === row[sub.key]) || null
-                                        : (sub.options && sub.options.length > 0 ? sub.options[0] : null)
-                                    }
-                                    getOptionLabel={(option) => option.value || ""}
-                                    isOptionEqualToValue={(option, value) => option.value === value.value}
-                                    onChange={(_, newValue) =>
-                                      handleListChange(
-                                        field.key,
-                                        rowIndex,
-                                        sub.key,
-                                        newValue ? newValue.value : (sub.options[0]?.value || "")
-                                      )
-                                    }
-                                    renderInput={(params) => (
-                                      <TextField {...params} size="small" fullWidth />
-                                    )}
-                                  />
-                                )}
-
-                                {/* Boolean → Switch */}
-                                {sub.type === "checkbox" && (
-                                  <Switch
-                                    checked={!!row[sub.key]}
-                                    onChange={(e) =>
-                                      handleListChange(field.key, rowIndex, sub.key, e.target.checked)
-                                    }
-                                  />
-                                )}
-                              </TableCell>
-                            ))}
-                            <TableCell>
-                              <IconButton
-                                color="error"
-                                onClick={() => removeListRow(field.key, rowIndex)}
-                              >
-                                <Delete />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
+                <h4>{field.name}</h4>
+                <Paper className="list-table">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        {field.fields.map((sub) => (
+                          <TableCell key={sub.key}>{sub.name}</TableCell>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </Paper>
-                  <Button
-                    startIcon={<AddCircle />}
-                    onClick={() => addListRow(field.key, field.fields)}
-                    className="add-row-btn"
-                  >
-                    Add {field.name}
-                  </Button>
-                </div>
+                        <TableCell>Sublist</TableCell>
+                        <TableCell>Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(formData[field.key] || []).map((row, rowIndex) => (
+                        <TableRow key={rowIndex}>
+                          {field.fields.map((sub) => (
+                            <TableCell key={sub.key}>
+                              {sub.type === "list"
+                                ? "-- sublist --"
+                                : renderSimpleField(
+                                    sub,
+                                    row[sub.key],
+                                    (val) => handleListChange(field.key, rowIndex, sub.key, val)
+                                  )}
+                            </TableCell>
+                          ))}
+                          <TableCell>
+                            {field.fields.some((f) => f.type === "list") && (
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() =>
+                                  setActiveSublist({
+                                    parentKey: field.key,
+                                    rowIndex,
+                                    fields: field.fields.filter((f) => f.type === "list"),
+                                  })
+                                }
+                              >
+                                View Sublist
+                              </Button>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <IconButton
+                              color="error"
+                              onClick={() => removeListRow(field.key, rowIndex)}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Paper>
+                <Button
+                  startIcon={<AddCircle />}
+                  onClick={() => addListRow(field.key, field.fields)}
+                  className="add-row-btn"
+                >
+                  Add {field.name}
+                </Button>
               </div>
             );
-          }
+          })}
+        </div>
 
-          // Non-list fields go into grid
-          return (
-            <div key={field.key} className="field-item">
-              {/* Text / Number / Date */}
-              {(field.type === "text" || field.type === "number" || field.type === "date") && (
-                <TextField
-                  label={field.name}
-                  type={field.type === "number" ? "number" : field.type}
-                  value={formData[field.key] || ""}
-                  onChange={(e) => handleChange(field.key, e.target.value)}
-                  fullWidth
-                  margin="normal"
-                />
-              )}
-
-              {/* Dropdown */}
-              {field.type === "dropdown" && (
-                <Autocomplete
-                  options={field.options || []}
-                  value={
-                    formData[field.key]
-                      ? field.options.find((opt) => opt.value === formData[field.key]) || null
-                      : (field.options && field.options.length > 0 ? field.options[0] : null)
-                  }
-                  getOptionLabel={(option) => option.value || ""}
-                  isOptionEqualToValue={(option, value) => option.value === value.value}
-                  onChange={(_, newValue) =>
-                    handleChange(field.key, newValue ? newValue.value : (field.options[0]?.value || ""))
-                  }
-                  renderInput={(params) => (
-                    <TextField {...params} label={field.name} margin="normal" fullWidth />
-                  )}
-                />
-              )}
-
-              {/* Checkbox */}
-              {field.type === "checkbox" && (
-                <div className="switch-row">
-                  <span>{field.name}</span>
-                  <Switch
-                    checked={!!formData[field.key]}
-                    onChange={(e) => handleChange(field.key, e.target.checked)}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
+        <Button variant="contained" color="primary" onClick={handleSave} className="save-btn">
+          Save Job
+        </Button>
       </div>
 
-      <Button variant="contained" color="primary" onClick={handleSave} className="save-btn">
-        Save Job
-      </Button>
+      {/* RIGHT: show sublist if selected */}
+      <div className="right-panel">
+        {activeSublist ? (
+          <>
+            <h3>Sublist for Row {activeSublist.rowIndex + 1}</h3>
+            {activeSublist.fields.map((sublistField) => (
+              <div key={sublistField.key} className="list-wrapper">
+                <h4>{sublistField.name}</h4>
+                <Paper className="list-table">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        {sublistField.fields.map((sf) => (
+                          <TableCell key={sf.key}>{sf.name}</TableCell>
+                        ))}
+                        <TableCell>Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(
+                        formData[activeSublist.parentKey]?.[activeSublist.rowIndex][
+                          sublistField.key
+                        ] || []
+                      ).map((row, idx) => (
+                        <TableRow key={idx}>
+                          {sublistField.fields.map((sf) => (
+                            <TableCell key={sf.key}>
+                              {renderSimpleField(
+                                sf,
+                                row[sf.key],
+                                (val) => {
+                                  const updated = [...formData[activeSublist.parentKey]];
+                                  updated[activeSublist.rowIndex] = {
+                                    ...updated[activeSublist.rowIndex],
+                                    [sublistField.key]: [
+                                      ...(updated[activeSublist.rowIndex][sublistField.key] || []),
+                                    ],
+                                  };
+                                  updated[activeSublist.rowIndex][sublistField.key][idx] = {
+                                    ...row,
+                                    [sf.key]: val,
+                                  };
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    [activeSublist.parentKey]: updated,
+                                  }));
+                                }
+                              )}
+                            </TableCell>
+                          ))}
+                          <TableCell>
+                            <IconButton
+                              color="error"
+                              onClick={() => {
+                                const updated = [...formData[activeSublist.parentKey]];
+                                updated[activeSublist.rowIndex][sublistField.key] =
+                                  updated[activeSublist.rowIndex][sublistField.key].filter(
+                                    (_, i) => i !== idx
+                                  );
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  [activeSublist.parentKey]: updated,
+                                }));
+                              }}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Paper>
+                <Button
+                  startIcon={<AddCircle />}
+                  onClick={() => {
+                    const updated = [...formData[activeSublist.parentKey]];
+                    const currentList =
+                      updated[activeSublist.rowIndex][sublistField.key] || [];
+                    const newRow = {};
+                    sublistField.fields.forEach((sf) => {
+                      newRow[sf.key] = "";
+                    });
+                    updated[activeSublist.rowIndex][sublistField.key] = [
+                      ...currentList,
+                      newRow,
+                    ];
+                    setFormData((prev) => ({
+                      ...prev,
+                      [activeSublist.parentKey]: updated,
+                    }));
+                  }}
+                  className="add-row-btn"
+                >
+                  Add {sublistField.name}
+                </Button>
+              </div>
+            ))}
+          </>
+        ) : (
+          <p className="no-sublist">Select a row to view its sublist</p>
+        )}
+      </div>
     </div>
   );
 }
