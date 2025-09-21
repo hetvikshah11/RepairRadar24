@@ -172,9 +172,9 @@ router.post("/jobs/savejobcard", authenticateAndGetUserDb, async (req, res) => {
 
     const lastJob = await jobsCollection.findOne(
       {},
-      { sort: { jobNo: -1 } }
+      { sort: { job_no: -1 } }
     );
-    const nextJobNo = lastJob ? lastJob.jobNo + 1 : 1;
+    const nextJobNo = lastJob ? lastJob.job_no + 1 : 1;
 
     newJob.job_no = nextJobNo;
     newJob.createdAt = new Date();
@@ -184,7 +184,7 @@ router.post("/jobs/savejobcard", authenticateAndGetUserDb, async (req, res) => {
     res.json({
       success: true,
       message: "Job saved successfully",
-      jobNo: nextJobNo,
+      job_no: nextJobNo,
     });
   } catch (err) {
     console.error("Error saving job:", err);
