@@ -209,7 +209,6 @@ export default function CreateJobCard() {
       });
     }
 
-    // 🔹 Stop if errors exist
     if (alertMessages.length > 0) {
       setErrors(newErrors);
       alert(alertMessages.join("\n"));
@@ -239,21 +238,34 @@ export default function CreateJobCard() {
   // ✅ Parts Modal validation before closing
   const handlePartsDone = () => {
     const { parentKey, rowIndex } = activeParts;
-    const row = formData[parentKey][rowIndex];
+    const updated = [...formData[parentKey]];
 
-    for (let i = 0; i < (row.parts || []).length; i++) {
-      const part = row.parts[i];
+    let hasError = false;
+    updated[rowIndex].parts = (updated[rowIndex].parts || []).map((part) => {
       if (!part.name || part.name.trim() === "") {
-        alert("Part name is required");
-        setPartsErrors("Part name is required");
-        return;
+        hasError = true;
       }
-      if (part.price === "" || part.price === null || isNaN(part.price)) {
-        alert("Price cannot be empty");
-        setPartsErrors("Price cannot be empty");
-        return;
-      }
+      return {
+        ...part,
+        name: part.name ? part.name.trim() : "",
+        qty: part.qty === "" || part.qty === undefined || part.qty === null ? 1 : Number(part.qty),
+        price:
+          part.price === "" || part.price === undefined || part.price === null
+            ? 0
+            : Number(part.price),
+      };
+    });
+
+    if (hasError) {
+      setPartsErrors("Part name cannot be empty");
+      return; // don’t close modal if invalid
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      [parentKey]: updated,
+    }));
+
     setPartsErrors("");
     setActiveParts(null);
   };
@@ -301,7 +313,6 @@ export default function CreateJobCard() {
                 </TableHead>
                 <TableBody>
                   {(formData[field.key] || []).map((row, rowIndex) => {
-                    // ✅ Find the item_status field from schema
                     const statusField = field.fields.find((f) => f.key === "item_status");
                     let rowColor = "";
                     if (statusField && row.item_status) {
@@ -317,7 +328,7 @@ export default function CreateJobCard() {
                       <TableRow
                         key={rowIndex}
                         style={{
-                          backgroundColor: rowColor ? rowColor + "20" : "transparent", // light tint
+                          backgroundColor: rowColor ? rowColor + "20" : "transparent",
                         }}
                       >
                         {field.fields
@@ -417,7 +428,7 @@ export default function CreateJobCard() {
                           <TableCell>
                             <TextField
                               type="number"
-                              value={p.qty || 1}
+                              value={p.qty === "" || p.qty === undefined ? "" : p.qty}
                               onChange={(e) => {
                                 const updated = [...formData[activeParts.parentKey]];
                                 updated[activeParts.rowIndex].parts[idx] = {
@@ -435,7 +446,11 @@ export default function CreateJobCard() {
                           <TableCell>
                             <TextField
                               type="number"
-                              value={p.price || 0}
+                              value={
+                                p.price === "" || p.price === undefined || p.price === null
+                                  ? ""
+                                  : p.price
+                              }
                               onChange={(e) => {
                                 const updated = [...formData[activeParts.parentKey]];
                                 updated[activeParts.rowIndex].parts[idx] = {
