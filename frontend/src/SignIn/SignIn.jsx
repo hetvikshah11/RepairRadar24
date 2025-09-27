@@ -55,6 +55,9 @@ export default function SignIn() {
             else if (err.response?.status === 404) {
                 alert("No user found with this email.");
             }
+            else{
+                alert("Something went wrong!!");
+            }
         }
     };
 
