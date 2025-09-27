@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { getMainDb } = require('../config/mainDb');
 const { connectUserDb } = require('../config/userDb');
+const { ObjectId } = require("mongodb");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'repairradar_secret_key'; // Replace with secure key or use .env in production
@@ -91,6 +92,65 @@ router.post('/signin', async (req, res) => {
   } catch (err) {
     console.error('Signin error:', err);
     res.status(500).json({ error: 'Server error during signin.' });
+  }
+});
+
+router.put("/update-name", async (req, res) => {
+  try {
+    // 1️⃣ Extract Authorization header
+    const authHeader = req.headers["authorization"];
+    if (!authHeader) {
+      console.log("No auth header");
+      return res.status(401).json({ success: false, message: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Invalid token format" });
+    }
+
+    // 2️⃣ Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    }
+
+    const userId = decoded.userId; // signed at login
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Invalid token payload" });
+    }
+
+    // 3️⃣ Validate input
+    const { name } = req.body;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ success: false, message: "Name is required" });
+    }
+
+    // 4️⃣ Connect to main DB
+    const db = await getMainDb();
+
+    // 5️⃣ Update user
+    const result = await db.collection("users").findOneAndUpdate(
+      { _id: new ObjectId(userId)},
+      { $set: { name } },
+      { returnDocument: "after" }
+    );
+
+    if (!result) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // 6️⃣ Respond
+    return res.status(200).json({
+      success: true,
+      message: "Business name updated successfully",
+      name: result.name
+    });
+  } catch (err) {
+    console.error("Error updating name:", err);
+    return res.status(500).json({ success: false, message: "Server error during update" });
   }
 });
 

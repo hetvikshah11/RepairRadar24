@@ -10,6 +10,7 @@ import JobCardConfig from './JobCardConfig/JobCardConfig.jsx';
 import CreateJobCard from './CreateJobCard/CreateJobCard.jsx';
 import JobCardDetails from './JobCardDetails/JobCardDetails.jsx';
 import SubscriptionPlans from './SubsciptionPlans/SubscriptionPlans.jsx';
+import Settings from './Settings/Settings.jsx';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/create-job" element={<CreateJobCard />} />
         <Route path="/jobs/:id" element={<JobCardDetails />} />
         <Route path="/plans" element={<SubscriptionPlans />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </Router>
   </React.StrictMode>,
