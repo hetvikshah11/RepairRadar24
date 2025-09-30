@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../axiosConfig";
 import { Button } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import Navbar from "../Navbar/Navbar";  // ⬅️ import here
 import "./dashboard.css";
 
 export default function Dashboard() {
@@ -17,7 +18,6 @@ export default function Dashboard() {
   const token = sessionStorage.getItem("token");
   const userName = sessionStorage.getItem("userName");
 
-  // 🟢 Initial Load
   useEffect(() => {
     if (!token) {
       alert("You are not logged in. Please sign in.");
@@ -35,7 +35,7 @@ export default function Dashboard() {
         if (countRes.data?.total) {
           setTotalJobs(countRes.data.total);
           if (countRes.data.total > 0) {
-            await fetchJobs(0); // fetch first batch
+            await fetchJobs(0);
           }
         }
       } catch (err) {
@@ -47,7 +47,6 @@ export default function Dashboard() {
     fetchInitialData();
   }, [navigate, token, userName]);
 
-  // 🟢 Fetch jobs with pagination
   const fetchJobs = async (pageNum) => {
     setLoading(true);
     try {
@@ -81,18 +80,8 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="logo">RepairRadar Dashboard</div>
-        <div className="nav-links">
-          <button onClick={() => navigate("/dashboard")} className="nav-btn">
-            Home
-          </button>
-          <button onClick={handleLogout} className="nav-btn">
-            Logout
-          </button>
-        </div>
-      </nav>
+      {/* Navbar extracted */}
+      <Navbar onLogout={handleLogout} />
 
       {/* Welcome */}
       <div className="welcome">
@@ -126,7 +115,6 @@ export default function Dashboard() {
                 <b>Phone:</b> {job.customer_phone || "-"}
               </p>
 
-              {/* Items table */}
               <table className="items-table">
                 <thead>
                   <tr>
