@@ -26,21 +26,34 @@ export default function Dashboard() {
     }
     if (userName) setName(userName.toUpperCase());
 
-    const fetchInitialData = async () => {
+    const fetchInitialData = async (isRetry = false) => {
       try {
         const countRes = await api.get("/user/jobs/count", {
           headers: { authorization: `Bearer ${token}` },
         });
 
-        if (countRes.data?.total) {
+        if (countRes.data?.total !== undefined) {
           setTotalJobs(countRes.data.total);
           if (countRes.data.total > 0) {
             await fetchJobs(0);
           }
         }
       } catch (err) {
+        const status = err.response?.status;
         console.error("Error fetching initial data:", err);
-        navigate("/");
+
+        // Retry once if 401
+        if (status === 401 && !isRetry) {
+          console.warn("Got 401, retrying after 0.5s...");
+          setTimeout(() => fetchInitialData(true), 500);
+        } else if (!isRetry) {
+          // Retry once for any other transient error
+          console.warn("Retrying fetch after 0.5s due to error...");
+          setTimeout(() => fetchInitialData(true), 500);
+        } else {
+          // After retry failed, navigate home
+          navigate("/");
+        }
       }
     };
 
