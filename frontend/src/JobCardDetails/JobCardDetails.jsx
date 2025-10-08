@@ -478,6 +478,7 @@ export default function JobCardDetails() {
 
         {/* 🟢 WhatsApp Button */}
         <Button
+        disabled={whatsappItems.length === 0}
           variant="contained"
           color="success"
           startIcon={<WhatsApp />}
@@ -510,8 +511,10 @@ export default function JobCardDetails() {
           ) : (
             <List>
               {whatsappMessages.map((msg) => (
-                <ListItemButton
+                <Button
                   key={msg._id}
+                  variant="contained"
+                  color="primary"
                   onClick={() => {
                     const phone = formData.customer_phone;
                     if (!phone) {
@@ -519,25 +522,28 @@ export default function JobCardDetails() {
                       return;
                     }
 
-                    // Extract the message template
                     const rawTemplate = msg.text || msg.message || "";
-
-                    // ✅ Use your new dynamic WhatsApp message generator
                     const finalMessage = generateWhatsappMessage(rawTemplate, formData);
-
-                    // Encode message for WhatsApp URL
                     const encoded = encodeURIComponent(finalMessage.trim());
                     const whatsappUrl = `https://wa.me/91${phone}?text=${encoded}`;
-
-                    // Open WhatsApp in a new tab
                     window.open(whatsappUrl, "_blank");
                   }}
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: "12px",
+                    m: 0.5,
+                    px: 2,
+                    py: 1,
+                    minWidth: "120px",
+                    boxShadow: 1,
+                    backgroundColor: "#25D366",
+                    "&:hover": {
+                      backgroundColor: "#1EBE57",
+                    },
+                  }}
                 >
-                  <ListItemText
-                    primary={msg.title || "Message"}
-                    secondary={msg.text || msg.message}
-                  />
-                </ListItemButton>
+                  {msg.name || "Message"}
+                </Button>
 
               ))}
             </List>
