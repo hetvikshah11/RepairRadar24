@@ -248,11 +248,16 @@ export default function JobCardDetails() {
   };
 
   // 🟢 Toggle item selection for WhatsApp
-  const toggleWhatsappItem = (item) => {
+  const toggleWhatsappItem = (index) => {
+    console.log("Toggling WhatsApp item:", index);
     setWhatsappItems((prev) => {
-      const exists = prev.some((i) => i.item_name === item.item_name);
-      if (exists) return prev.filter((i) => i.item_name !== item.item_name);
-      return [...prev, item];
+      const exists = prev.includes(index);
+      if (exists) {
+        // Remove index if already selected
+        return prev.filter((i) => i !== index);
+      }
+      // Add index if not already selected
+      return [...prev, index];
     });
   };
 
@@ -292,10 +297,10 @@ export default function JobCardDetails() {
   };
 
   // ✅ Main message generator
-  function generateWhatsappMessage(template, formData) {
+  function generateWhatsappMessage(template, formData, selectedIndices = []) {
     if (!template || !formData) return "";
 
-    // Helper: safely fetch nested value (like "customer.name")
+    // Helper to safely fetch nested formData values
     const getValueFromFormData = (key) => {
       if (!formData || !key) return "";
       const parts = key.split(".");
@@ -312,23 +317,33 @@ export default function JobCardDetails() {
 
     let message = template;
 
-    // Step 1: Handle list-type fields like items
+    // ✅ Detect list-type fields (like items)
     if (Array.isArray(formData.items) && formData.items.length > 0) {
-      const itemKeys = Object.keys(formData.items[0] || {});
-      const itemSectionMatch = message.match(
-        new RegExp(`(.*\\{(?:${itemKeys.join("|")}).*\\}.*)`, "s")
+      // Extract all keys from one item (e.g. ["item_name", "item_qty", "item_serial"])
+      const itemKeys = Object.keys(formData.items[0]);
+
+      // Find the line(s) that include any of the item keys → that’s our repeat section
+      const lines = message.split(/\r?\n/);
+      const repeatLines = lines.filter((line) =>
+        itemKeys.some((key) => line.includes(`{${key}}`))
       );
 
-      if (itemSectionMatch) {
-        const itemTemplate = itemSectionMatch[1];
-        const itemsSection = formData.items
+      if (repeatLines.length > 0) {
+        const itemTemplate = repeatLines.join("\n");
+
+        const selectedItems =
+          selectedIndices.length > 0
+            ? formData.items.filter((_, idx) => selectedIndices.includes(idx))
+            : formData.items;
+
+        // Replace placeholders inside item section for each selected item
+        const itemsSection = selectedItems
           .map((item) =>
             itemTemplate.replace(/\{(.*?)\}/g, (_, key) => {
               const val = item[key] ?? getValueFromFormData(key) ?? "";
-              return val ? val : "";
+              return val || "";
             })
           )
-          // 🔥 Remove empty (), [], {}, <> around missing values
           .map((line) =>
             line
               .replace(/(\(|\[|\{|\<)\s*(\)|\]|\}|\>)/g, "")
@@ -337,17 +352,24 @@ export default function JobCardDetails() {
           )
           .join("\n");
 
-        message = message.replace(itemSectionMatch[1], itemsSection);
+        // Replace the original item-related lines with the repeated section
+        message = lines
+          .map((line) =>
+            itemKeys.some((key) => line.includes(`{${key}}`))
+              ? itemsSection
+              : line
+          )
+          .join("\n");
       }
     }
 
-    // Step 2: Replace remaining placeholders
+    // ✅ Replace any remaining placeholders (outside item list)
     message = message.replace(/\{(.*?)\}/g, (_, key) => {
       const val = getValueFromFormData(key);
-      return val ? val : "";
+      return val || "";
     });
 
-    // Step 3: Final cleanup — remove leftover empty (), [], {}, <>
+    // ✅ Cleanup leftover empty (), [], {}, <>
     message = message
       .replace(/(\(|\[|\{|\<)\s*(\)|\]|\}|\>)/g, "")
       .replace(/\s+/g, " ")
@@ -355,6 +377,8 @@ export default function JobCardDetails() {
 
     return message;
   }
+
+
 
   if (loading) return <div className="loading">Loading...</div>;
 
@@ -440,10 +464,10 @@ export default function JobCardDetails() {
                             Parts
                           </Button>
                         </TableCell>
-                        <TableCell align="center"> {/* 🟢 Checkbox */}
+                        <TableCell align="center">
                           <Checkbox
-                            checked={whatsappItems.some((i) => i.item_name === row.item_name)}
-                            onChange={() => toggleWhatsappItem(row)}
+                            checked={whatsappItems.includes(rowIndex)}
+                            onChange={() => toggleWhatsappItem(rowIndex)}
                           />
                         </TableCell>
                         <TableCell>
@@ -478,7 +502,7 @@ export default function JobCardDetails() {
 
         {/* 🟢 WhatsApp Button */}
         <Button
-        disabled={whatsappItems.length === 0}
+          disabled={whatsappItems.length === 0}
           variant="contained"
           color="success"
           startIcon={<WhatsApp />}
@@ -515,7 +539,7 @@ export default function JobCardDetails() {
                   key={msg._id}
                   variant="contained"
                   color="primary"
-                  onClick={() => {
+                  onClick={async () => {
                     const phone = formData.customer_phone;
                     if (!phone) {
                       alert("No customer phone found.");
@@ -523,7 +547,14 @@ export default function JobCardDetails() {
                     }
 
                     const rawTemplate = msg.text || msg.message || "";
-                    const finalMessage = generateWhatsappMessage(rawTemplate, formData);
+                    const finalMessage = generateWhatsappMessage(rawTemplate, formData, whatsappItems);
+                    try {
+                      await navigator.clipboard.writeText(finalMessage);
+                      console.log("WhatsApp message copied to clipboard!");
+                    } catch (err) {
+                      console.error("Failed to copy message:", err);
+                    }
+
                     const encoded = encodeURIComponent(finalMessage.trim());
                     const whatsappUrl = `https://wa.me/91${phone}?text=${encoded}`;
                     window.open(whatsappUrl, "_blank");
