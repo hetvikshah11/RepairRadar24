@@ -327,7 +327,6 @@ router.put("/whatsapp/update-message/:id", authenticateAndGetUserDb, async (req,
   }
 });
 
-
 router.delete("/whatsapp/delete-message/:id", authenticateAndGetUserDb, async (req, res) => {
   try {
     const userDbConnection = await getUserDb(req.token);
@@ -350,5 +349,18 @@ router.delete("/whatsapp/delete-message/:id", authenticateAndGetUserDb, async (r
   }
 });
 
+router.get("/customerdetails", authenticateAndGetUserDb, async (req, res) => {
+  try {
+    const userDb = await getUserDb(req.token);
+    const customers = await userDb
+      .collection("customer_phones")
+      .find({}, { projection: { _id: 0 } })
+      .toArray();
+    res.json({ success: true, customers });
+  } catch (err) {
+    console.error("Error fetching customers:", err);
+    res.status(500).json({ success: false, message: "Failed to load customers" });
+  }
+});
 
 module.exports = router;

@@ -30,6 +30,8 @@ export default function CreateJobCard() {
   const [errors, setErrors] = useState({});
   const [partsErrors, setPartsErrors] = useState("");
 
+  const [customerDetails, setCustomerDetails] = useState([]);
+
   // ✅ Fetch schema
   useEffect(() => {
     const token = sessionStorage.getItem("token");
@@ -72,6 +74,12 @@ export default function CreateJobCard() {
         alert("Could not load schema.");
       })
       .finally(() => setLoading(false));
+
+    api.get("/user/customerdetails", { headers: { authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (res.data.success) setCustomerDetails(res.data.customers);
+      })
+      .catch((err) => console.error("Failed to load customers:", err));
   }, [navigate]);
 
   const handleChange = (key, value) => {
@@ -169,6 +177,42 @@ export default function CreateJobCard() {
         return null;
     }
   };
+
+  const handleCustomerNameChange = (event, value) => {
+    const found = customerDetails.find(
+      (c) => c.customer_name.toLowerCase() === (value || "").toLowerCase()
+    );
+
+    setFormData((prev) => {
+      let updated = { ...prev, customer_name: value || "" };
+
+      // Only update phone if found and current phone is empty
+      if (found && !prev.customer_phone) {
+        updated.customer_phone = found.customer_phone;
+      }
+
+      return updated;
+    });
+  };
+
+  const handleCustomerPhoneChange = (e) => {
+    const phone = e.target.value.replace(/\D/g, ""); // keep only digits
+
+    setFormData((prev) => {
+      let updated = { ...prev, customer_phone: phone };
+
+      // If phone length is 10 and name is currently empty, try to autofill name
+      if (phone.length === 10 && !prev.customer_name) {
+        const found = customerDetails.find((c) => c.customer_phone === phone);
+        if (found) {
+          updated.customer_name = found.customer_name;
+        }
+      }
+
+      return updated;
+    });
+  };
+
 
   // ✅ Save job with validations
   const handleSave = async () => {
@@ -278,8 +322,49 @@ export default function CreateJobCard() {
 
       {/* Job Details */}
       <div className="job-details-grid">
+
+        <div key="customer_phone" className="field-item">
+          <TextField
+            label="Customer Phone"
+            value={formData.customer_phone || ""}
+            onChange={handleCustomerPhoneChange}
+            fullWidth
+            margin="normal"
+            size="small"
+            error={!!errors.customer_phone}
+            helperText={errors.customer_phone}
+            inputProps={{ maxLength: 10 }}
+          />
+        </div>
+
+        <div key="customer_phone" className="field-item">
+          <Autocomplete
+            freeSolo
+            options={customerDetails.map((c) => c.customer_name)}
+            value={formData.customer_name || ""}
+            onInputChange={handleCustomerNameChange}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Customer Name"
+                margin="normal"
+                fullWidth
+                size="small"
+                error={!!errors.customer_name}
+                helperText={errors.customer_name}
+              />
+            )}
+          />
+        </div>
+
         {schema
-          .filter((field) => field.type !== "list")
+          .filter(
+            (field) =>
+              field.type !== "list" &&
+              field.key !== "customer_name" &&
+              field.key !== "customer_phone" &&
+              field.key !== "job_no"
+          )
           .map((field) => (
             <div key={field.key} className="field-item">
               {renderSimpleField(field, formData[field.key], (val) =>
