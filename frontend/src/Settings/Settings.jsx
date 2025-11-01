@@ -29,7 +29,11 @@ const Settings = () => {
     const [jobCardSchema, setJobCardSchema] = useState(null);
 
     // Customer Details
-    const [customers, setCustomers] = useState([]); // 👈 NEW: State for customer list
+    const [customers, setCustomers] = useState([]);
+
+    // 👈 NEW: Saved Items
+    const [itemName, setItemName] = useState(""); 
+    const [savedItems, setSavedItems] = useState([]); 
 
     const navigate = useNavigate();
 
@@ -49,7 +53,8 @@ const Settings = () => {
 
         fetchMessages();
         fetchSchema();
-        fetchCustomers(); // 👈 NEW: Fetch customers on load
+        fetchCustomers();
+        fetchSavedItems(); // 👈 NEW: Fetch saved items on load
     }, [navigate]);
 
     const fetchMessages = async () => {
@@ -64,16 +69,13 @@ const Settings = () => {
         }
     };
 
-    // 👈 NEW: Function to fetch customers
     const fetchCustomers = async () => {
         try {
             const token = sessionStorage.getItem("token");
-            // Assuming the route is /user/customerdetails based on your other user routes
             const res = await api.get("/user/customerdetails", {
                 headers: { authorization: `Bearer ${token}` },
             });
             if (res.data.success) {
-                console.log("Fetched customers:", res.data.customers);
                 setCustomers(res.data.customers || []);
             } else {
                 console.error("Failed to fetch customers:", res.data.message);
@@ -87,25 +89,97 @@ const Settings = () => {
         }
     };
 
-    // 👈 NEW: Function to delete a customer
+    // 👈 NEW: Function to fetch saved items
+    const fetchSavedItems = async () => {
+        try {
+            const token = sessionStorage.getItem("token");
+            // Assuming a new route /user/items
+            const res = await api.get("/user/items", {
+                headers: { authorization: `Bearer ${token}` },
+            });
+            if (res.data.success) {
+                setSavedItems(res.data.items || []);
+            } else {
+                console.error("Failed to fetch items:", res.data.message);
+            }
+        } catch (err) {
+            console.error("Error fetching items:", err);
+        }
+    };
+
+    // 👈 NEW: Function to add a new item
+    const handleAddItem = async (e) => {
+        e.preventDefault();
+        const trimmedItemName = itemName.trim();
+        if (!trimmedItemName) {
+            alert("Please enter an item name.");
+            return;
+        }
+
+        try {
+            const token = sessionStorage.getItem("token");
+            const payload = { item_name: trimmedItemName };
+            
+            // Assuming POST /user/items
+            const res = await api.post("/user/items", payload, {
+                headers: { authorization: `Bearer ${token}` },
+            });
+
+            if (res.data.success) {
+                alert("Item added successfully.");
+                // Add the new item to local state (assuming backend returns the new item)
+                setSavedItems([...savedItems, res.data.item]);
+                setItemName(""); // Clear the input
+            } else {
+                alert(res.data.message || "Failed to add item.");
+            }
+        } catch (err) {
+            console.error("Error adding item:", err);
+            alert(err.response?.data?.message || "Failed to add item.");
+        }
+    };
+
+    // 👈 NEW: Function to delete a saved item
+    const handleDeleteItem = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this item?")) return;
+
+        try {
+            const token = sessionStorage.getItem("token");
+            // Assuming DELETE /user/items/:id
+            const res = await api.delete(`/user/items/${id}`, {
+                headers: { authorization: `Bearer ${token}` },
+            });
+
+            if (res.status === 200) {
+                alert("Item deleted successfully.");
+                // Update state locally
+                setSavedItems(prevItems =>
+                    prevItems.filter(item => item._id !== id)
+                );
+            } else {
+                alert(res.data.message || "Failed to delete item.");
+            }
+        } catch (err) {
+            console.error("Error deleting item:", err);
+            alert(err.response?.data?.message || "Failed to delete item.");
+        }
+    };
+
+
     const handleDeleteCustomer = async (id) => {
         if (!window.confirm("Are you sure you want to delete this customer?")) return;
 
         try {
             const token = sessionStorage.getItem("token");
-            // The route now uses the document's _id
             const res = await api.delete(`/user/customerdetails/${id}`, {
                 headers: { authorization: `Bearer ${token}` },
             });
 
             if (res.status === 200) {
                 alert("Customer deleted successfully.");
-
-                // 👈 NEW: Update state locally instead of re-fetching
                 setCustomers(prevCustomers =>
                     prevCustomers.filter(customer => customer._id !== id)
                 );
-
             } else {
                 alert(res.data.message || "Failed to delete customer.");
             }
@@ -132,6 +206,7 @@ const Settings = () => {
     };
 
     const getRelevantFields = (schema) => {
+        // ... (function unchanged)
         if (!schema?.schema) return [];
         const usefulKeys = [
             "job_no",
@@ -162,6 +237,7 @@ const Settings = () => {
     };
 
     const handleSaveMessage = async () => {
+        // ... (function unchanged)
         if (!messageName.trim()) {
             alert("Please enter a message name.");
             return;
@@ -204,6 +280,7 @@ const Settings = () => {
     };
 
     const handleDeleteMessage = async (id) => {
+        // ... (function unchanged)
         if (!window.confirm("Are you sure you want to delete this message?")) return;
         try {
             const token = sessionStorage.getItem("token");
@@ -218,6 +295,7 @@ const Settings = () => {
     };
 
     const openEditModal = (msg) => {
+        // ... (function unchanged)
         setEditingMessageId(msg._id);
         setMessageName(msg.name);
         setCustomText(msg.text);
@@ -225,6 +303,7 @@ const Settings = () => {
     };
 
     const handleNameChange = async (e) => {
+        // ... (function unchanged)
         e.preventDefault();
         try {
             const token = sessionStorage.getItem("token");
@@ -249,6 +328,7 @@ const Settings = () => {
     };
 
     const handleVerifyPassword = async (e) => {
+        // ... (function unchanged)
         e.preventDefault();
         try {
             const token = sessionStorage.getItem("token");
@@ -273,6 +353,7 @@ const Settings = () => {
     };
 
     const handlePasswordChange = async (e) => {
+        // ... (function unchanged)
         e.preventDefault();
         if (password !== confirmPassword) {
             alert("Passwords do not match!");
@@ -303,6 +384,7 @@ const Settings = () => {
     };
 
     const insertField = (key) => {
+        // ... (function unchanged)
         if (!customTextRef.current) return;
         const textarea = customTextRef.current;
         const cursorPos = textarea.selectionStart;
@@ -337,12 +419,18 @@ const Settings = () => {
                     >
                         WhatsApp Messages
                     </button>
-                    {/* 👈 NEW: Customer Details Tab Button */}
                     <button
                         className={`tab-btn ${activeTab === "customerdetails" ? "active" : ""}`}
                         onClick={() => setActiveTab("customerdetails")}
                     >
                         Customer Details
+                    </button>
+                    {/* 👈 NEW: Saved Items Tab Button */}
+                    <button
+                        className={`tab-btn ${activeTab === "saveditems" ? "active" : ""}`}
+                        onClick={() => setActiveTab("saveditems")}
+                    >
+                        Saved Items
                     </button>
                 </div>
 
@@ -350,6 +438,7 @@ const Settings = () => {
                 <div className="settings-right">
                     {activeTab === "personal" && (
                         <>
+                           {/* ... (personal info content unchanged) ... */}
                             <h2>Personal Information</h2>
                             <hr />
                             <form onSubmit={handleNameChange} className="settings-form">
@@ -382,7 +471,6 @@ const Settings = () => {
 
                             <div className="settings-form">
                                 <label>Change Password</label>
-
                                 <form onSubmit={handleVerifyPassword} className="settings-form">
                                     <input
                                         type="password"
@@ -426,6 +514,7 @@ const Settings = () => {
 
                     {activeTab === "whatsapp" && (
                         <>
+                           {/* ... (whatsapp content unchanged) ... */}
                             <h2>WhatsApp Messages</h2>
                             <hr />
                             <div className="whatsapp-scroll">
@@ -457,13 +546,12 @@ const Settings = () => {
                         </>
                     )}
 
-                    {/* 👈 NEW: Customer Details Tab Content */}
                     {activeTab === "customerdetails" && (
                         <>
+                            {/* ... (customer details content unchanged) ... */}
                             <h2>Customer Details</h2>
                             <hr />
                             <div className="customer-table-container">
-                                {/* You'll want to add styles for 'customer-table' in your CSS */}
                                 <table className="customer-table">
                                     <thead>
                                         <tr>
@@ -500,12 +588,62 @@ const Settings = () => {
                             </div>
                         </>
                     )}
+
+                    {/* 👈 NEW: Saved Items Tab Content */}
+                    {activeTab === "saveditems" && (
+                        <>
+                            <h2>Saved Items</h2>
+                            <hr />
+
+                            {/* Add Item Form */}
+                            <form onSubmit={handleAddItem} className="settings-form saved-item-form">
+                                <label>Add New Item</label>
+                                <div className="input-with-button">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter item name (e.g., Laptop, Mobile)"
+                                        value={itemName}
+                                        onChange={(e) => setItemName(e.target.value)}
+                                        className="light-input"
+                                    />
+                                    <button type="submit" className="add-btn">
+                                        <FaPlus /> Add
+                                    </button>
+                                </div>
+                            </form>
+
+                            {/* List of Saved Items */}
+                            <div className="saved-items-list-container">
+                                <h4>Existing Items</h4>
+                                {savedItems.length > 0 ? (
+                                    <ul className="saved-items-list">
+                                        {savedItems.map((item) => (
+                                            <li key={item._id}>
+                                                <span>{item.item_name}</span>
+                                                <button
+                                                    className="icon-btn delete-btn"
+                                                    onClick={() => handleDeleteItem(item._id)}
+                                                >
+                                                    <FaTrash />
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p style={{ textAlign: "center", color: "#888", marginTop: "20px" }}>
+                                        No saved items found.
+                                    </p>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
             {/* Modal */}
             {showModal && (
                 <div className="modal-overlay">
+                    {/* ... (modal content unchanged) ... */}
                     <div className="modal-content modal-grid">
                         <div className="modal-left">
                             <h3>{editingMessageId ? "Edit Message" : "Create New Message"}</h3>

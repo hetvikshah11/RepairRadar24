@@ -272,7 +272,7 @@ router.put("/jobs/updatejobcard/:id",authenticateAndGetUserDb, async (req, res) 
         updates.customer_phone,
         updates.customer_name
       );
-      
+
     } catch (err) {
       console.error("Error updating job:", err);
       res.status(500).json({ error: "Failed to update job" });
@@ -421,6 +421,65 @@ router.delete("/customerdetails/:id", authenticateAndGetUserDb, async (req, res)
     console.error("Error deleting customer:", err);
     res.status(500).json({ success: false, message: "Failed to delete customer" });
   }
+});
+
+router.get("/items", authenticateAndGetUserDb, async (req, res) => {
+    try {
+        const userDb = await getUserDb(req.token);
+        const items = await userDb.collection("items").find({}).toArray();
+        res.json({ success: true, items });
+    } catch (err) {
+        console.error("Error fetching items:", err);
+        res.status(500).json({ success: false, message: "Failed to load items" });
+    }
+});
+
+// 👈 NEW: POST (add) a new saved item
+router.post("/items", authenticateAndGetUserDb, async (req, res) => {
+    try {
+        const { item_name } = req.body;
+        if (!item_name) {
+            return res.status(400).json({ success: false, message: "Item name is required" });
+        }
+        
+        const userDb = await getUserDb(req.token);
+        const newItem = { item_name: item_name.trim() };
+        
+        // Insert the new document
+        const result = await userDb.collection("items").insertOne(newItem);
+        
+        // Create the object to return to the frontend, including the new _id
+        const insertedItem = { _id: result.insertedId, ...newItem }; 
+
+        res.status(201).json({ success: true, message: "Item added", item: insertedItem });
+    
+    } catch (err) {
+        console.error("Error adding item:", err);
+        res.status(500).json({ success: false, message: "Failed to add item" });
+    }
+});
+
+// 👈 NEW: DELETE a saved item
+router.delete("/items/:id", authenticateAndGetUserDb, async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid ID format" });
+        }
+        
+        const userDb = await getUserDb(req.token);
+        const result = await userDb.collection("items").deleteOne({ _id: new ObjectId(id) });
+        
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, message: "Item not found" });
+        }
+        
+        res.status(200).json({ success: true, message: "Item deleted" });
+    
+    } catch (err) {
+        console.error("Error deleting item:", err);
+        res.status(500).json({ success: false, message: "Failed to delete item" });
+    }
 });
 
 module.exports = router;
