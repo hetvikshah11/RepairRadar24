@@ -297,3 +297,85 @@
   background: #007bff;
   color: white;
 }
+
+.customer-table-container {
+  width: 100%;
+  max-height: 60vh; /* Adjust height as needed */
+  overflow-y: auto;   /* Adds a scrollbar if the content overflows */
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.customer-table {
+  width: 100%;
+  border-collapse: collapse; /* Removes double borders */
+}
+
+.customer-table th,
+.customer-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0; /* Light border for rows */
+}
+
+/* Table Header */
+.customer-table th {
+  background-color: #f9f9f9; /* Very light grey header */
+  font-weight: 600;
+  font-size: 0.9em;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Table Body */
+.customer-table tbody tr:hover {
+  background-color: #f5f5f5; /* Hover effect for rows */
+}
+
+.customer-table td {
+  color: #333;
+  vertical-align: middle;
+}
+
+/* "No customers found" message */
+.customer-table td[colSpan="3"] {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 20px;
+}
+
+/* You already have .icon-btn and .delete-btn styles.
+  This ensures they work well inside the table.
+*/
+.customer-table .icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.customer-table .icon-btn svg {
+  color: #777;
+  font-size: 16px;
+}
+
+.customer-table .delete-btn:hover {
+  background-color: #ffebee; /* Light red background on hover */
+}
+
+.customer-table .delete-btn:hover svg {
+  color: #d32f2f; /* Red icon color on hover */
+}
+
+/* This is probably already in your settings.css, but just in case */
+.icon-btn.delete-btn svg {
+  color: #e53935;
+}

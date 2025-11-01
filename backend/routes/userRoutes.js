@@ -354,13 +354,43 @@ router.get("/customerdetails", authenticateAndGetUserDb, async (req, res) => {
     const userDb = await getUserDb(req.token);
     const customers = await userDb
       .collection("customer_phones")
-      .find({}, { projection: { _id: 0 } })
+      .find({})
       .toArray();
     res.json({ success: true, customers });
   } catch (err) {
     console.error("Error fetching customers:", err);
     res.status(500).json({ success: false, message: "Failed to load customers" });
   }
+});
+
+router.delete("/customerdetails/:id", authenticateAndGetUserDb, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Validate the ID format before proceeding
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid ID format" });
+        }
+
+        // 2. Get the user-specific database
+        const userDb = await getUserDb(req.token);
+        const deleteId = new ObjectId(id);
+
+        // 3. Perform the delete operation
+        const result = await userDb.collection("customer_phones").deleteOne({ _id: deleteId });
+
+        // 4. Check if a document was actually deleted
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, message: "Customer not found" });
+        }
+
+        // 5. Send success response
+        res.status(200).json({ success: true, message: "Customer deleted successfully" });
+    
+    } catch (err) {
+        console.error("Error deleting customer:", err);
+        res.status(500).json({ success: false, message: "Failed to delete customer" });
+    }
 });
 
 module.exports = router;

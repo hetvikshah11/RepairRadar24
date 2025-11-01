@@ -6,7 +6,7 @@ import { FaPen, FaPlus, FaTrash, FaEdit } from "react-icons/fa";
 import Navbar from "../Navbar/Navbar";
 
 const Settings = () => {
-    const [activeTab, setActiveTab] = useState("personal"); // 👈 new tab state
+    const [activeTab, setActiveTab] = useState("personal");
 
     const [name, setName] = useState("");
     const [originalName, setOriginalName] = useState("");
@@ -28,6 +28,9 @@ const Settings = () => {
     // Jobcard Schema
     const [jobCardSchema, setJobCardSchema] = useState(null);
 
+    // Customer Details
+    const [customers, setCustomers] = useState([]); // 👈 NEW: State for customer list
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -46,6 +49,7 @@ const Settings = () => {
 
         fetchMessages();
         fetchSchema();
+        fetchCustomers(); // 👈 NEW: Fetch customers on load
     }, [navigate]);
 
     const fetchMessages = async () => {
@@ -57,6 +61,57 @@ const Settings = () => {
             setMessages(res.data || []);
         } catch (err) {
             console.error("Error fetching messages:", err);
+        }
+    };
+
+    // 👈 NEW: Function to fetch customers
+    const fetchCustomers = async () => {
+        try {
+            const token = sessionStorage.getItem("token");
+            // Assuming the route is /user/customerdetails based on your other user routes
+            const res = await api.get("/user/customerdetails", {
+                headers: { authorization: `Bearer ${token}` },
+            });
+            if (res.data.success) {
+                console.log("Fetched customers:", res.data.customers);
+                setCustomers(res.data.customers || []);
+            } else {
+                console.error("Failed to fetch customers:", res.data.message);
+            }
+        } catch (err) {
+            console.error("Error fetching customers:", err);
+            if (err.response?.status === 401) {
+                alert("Session expired. Please log in again.");
+                navigate("/");
+            }
+        }
+    };
+
+    // 👈 NEW: Function to delete a customer
+    const handleDeleteCustomer = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this customer?")) return;
+
+        try {
+            const token = sessionStorage.getItem("token");
+            // The route now uses the document's _id
+            const res = await api.delete(`/user/customerdetails/${id}`, {
+                headers: { authorization: `Bearer ${token}` },
+            });
+
+            if (res.status === 200) {
+                alert("Customer deleted successfully.");
+
+                // 👈 NEW: Update state locally instead of re-fetching
+                setCustomers(prevCustomers =>
+                    prevCustomers.filter(customer => customer._id !== id)
+                );
+
+            } else {
+                alert(res.data.message || "Failed to delete customer.");
+            }
+        } catch (err) {
+            console.error("Error deleting customer:", err);
+            alert(err.response?.data?.message || "Failed to delete customer.");
         }
     };
 
@@ -282,6 +337,13 @@ const Settings = () => {
                     >
                         WhatsApp Messages
                     </button>
+                    {/* 👈 NEW: Customer Details Tab Button */}
+                    <button
+                        className={`tab-btn ${activeTab === "customerdetails" ? "active" : ""}`}
+                        onClick={() => setActiveTab("customerdetails")}
+                    >
+                        Customer Details
+                    </button>
                 </div>
 
                 {/* Right Content */}
@@ -394,9 +456,52 @@ const Settings = () => {
                             </div>
                         </>
                     )}
+
+                    {/* 👈 NEW: Customer Details Tab Content */}
+                    {activeTab === "customerdetails" && (
+                        <>
+                            <h2>Customer Details</h2>
+                            <hr />
+                            <div className="customer-table-container">
+                                {/* You'll want to add styles for 'customer-table' in your CSS */}
+                                <table className="customer-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Customer Name</th>
+                                            <th>Customer Phone</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {customers.length > 0 ? (
+                                            customers.map((customer) => (
+                                                <tr key={customer._id}>
+                                                    <td>{customer.customer_name}</td>
+                                                    <td>{customer.customer_phone}</td>
+                                                    <td>
+                                                        <button
+                                                            className="icon-btn delete-btn"
+                                                            onClick={() => handleDeleteCustomer(customer._id)}
+                                                        >
+                                                            <FaTrash />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="3" style={{ textAlign: "center" }}>
+                                                    No customers found.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
-
 
             {/* Modal */}
             {showModal && (
