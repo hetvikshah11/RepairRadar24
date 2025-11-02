@@ -33,9 +33,10 @@ export default function JobCardDetails() {
   const [activeParts, setActiveParts] = useState(null);
   const [errors, setErrors] = useState({});
   const [partsErrors, setPartsErrors] = useState("");
-  const [whatsappItems, setWhatsappItems] = useState([]); // 🟢 NEW
-  const [whatsappMessages, setWhatsappMessages] = useState([]); // 🟢 NEW
-  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false); // 🟢 NEW
+  const [whatsappItems, setWhatsappItems] = useState([]);
+  const [whatsappMessages, setWhatsappMessages] = useState([]);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [savedItems, setSavedItems] = useState([]);
 
   // ✅ Fetch schema + job data
   useEffect(() => {
@@ -49,13 +50,15 @@ export default function JobCardDetails() {
     Promise.all([
       api.get("/user/get-config", { headers: { authorization: `Bearer ${token}` } }),
       api.get(`/user/jobs/getjobcard/${id}`, { headers: { authorization: `Bearer ${token}` } }),
+      api.get("/user/items", { headers: { authorization: `Bearer ${token}` } })
     ])
-      .then(([schemaRes, jobRes]) => {
+      .then(([schemaRes, jobRes, itemRes]) => {
         if (schemaRes.data?.schema) {
           console.log("Schema fetched:", schemaRes.data.schema);
           setSchema(schemaRes.data.schema);
         }
         if (jobRes.data?.job) setFormData(jobRes.data.job);
+        if (itemRes?.data?.items) setSavedItems(itemRes.data.items);
       })
       .catch((err) => {
         console.error("Error loading job details:", err);
@@ -444,14 +447,37 @@ export default function JobCardDetails() {
                           .filter((f) => f.type !== "list")
                           .map((sub) => (
                             <TableCell key={sub.key}>
-                              {renderSimpleField(
-                                sub,
-                                row[sub.key],
-                                (val) => handleListChange(field.key, rowIndex, sub.key, val)
+                              {sub.key === "item_name" ? (
+                                <Autocomplete
+                                  freeSolo
+                                  options={savedItems.map((item) => item.item_name)}
+                                  value={row[sub.key] || ""}
+                                  onInputChange={(_, newValue) => {
+                                    handleListChange(field.key, rowIndex, sub.key, newValue || "");
+                                  }}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      label={sub.name}
+                                      margin="normal"
+                                      fullWidth
+                                      size="small"
+                                      error={!!errors[`item_${rowIndex}_name`]}
+                                      helperText={errors[`item_${rowIndex}_name`]}
+                                    />
+                                  )}
+                                />
+                              ) : (
+                                renderSimpleField(
+                                  sub,
+                                  row[sub.key],
+                                  (val) => handleListChange(field.key, rowIndex, sub.key, val)
+                                )
                               )}
-                              {errors[`item_${rowIndex}_name`] && sub.key === "item_name" && (
+
+                              {sub.key === "item_qty" && errors[`item_${rowIndex}_qty`] && (
                                 <span className="error-text">
-                                  {errors[`item_${rowIndex}_name`]}
+                                  {errors[`item_${rowIndex}_qty`]}
                                 </span>
                               )}
                             </TableCell>

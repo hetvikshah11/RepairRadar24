@@ -31,6 +31,8 @@ export default function CreateJobCard() {
   const [partsErrors, setPartsErrors] = useState("");
 
   const [customerDetails, setCustomerDetails] = useState([]);
+  const [savedItems, setSavedItems] = useState([]);
+  const [savedParts, setSavedParts] = useState([]);
 
   // ✅ Fetch schema
   useEffect(() => {
@@ -41,12 +43,12 @@ export default function CreateJobCard() {
       return;
     }
 
-    api
-      .get("/user/get-config", {
-        headers: { authorization: `Bearer ${token}` },
-      })
+    api.get("/user/get-config", {
+      headers: { authorization: `Bearer ${token}` },
+    })
       .then((res) => {
         if (res.data && res.data.schema) {
+          // console.log("Fetched schema:", res.data.schema);
           setSchema(res.data.schema);
 
           const defaults = {};
@@ -70,7 +72,7 @@ export default function CreateJobCard() {
           navigate("/");
           return;
         }
-        console.error("Schema fetch failed", err);
+        // console.error("Schema fetch failed", err);
         alert("Could not load schema.");
       })
       .finally(() => setLoading(false));
@@ -80,6 +82,15 @@ export default function CreateJobCard() {
         if (res.data.success) setCustomerDetails(res.data.customers);
       })
       .catch((err) => console.error("Failed to load customers:", err));
+
+    api.get("/user/items", { headers: { authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (res.data.success) {
+          console.log("Fetched items:", res.data.items);
+          setSavedItems(res.data.items);
+        }
+      })
+      .catch((err) => console.error("Failed to load items:", err));
   }, [navigate]);
 
   const handleChange = (key, value) => {
@@ -420,17 +431,41 @@ export default function CreateJobCard() {
                           .filter((f) => f.type !== "list")
                           .map((sub) => (
                             <TableCell key={sub.key}>
-                              {renderSimpleField(
-                                sub,
-                                row[sub.key],
-                                (val) => handleListChange(field.key, rowIndex, sub.key, val)
+                              {sub.key === "item_name" ? (
+                                <Autocomplete
+                                  freeSolo // Allows typing new values
+                                  options={savedItems.map((i)=>i.item_name)} // Use the item list from state
+                                  value={row[sub.key] || ""}
+                                  onInputChange={(_, newValue) => {
+                                    // Update state when user types or selects
+                                    handleListChange(field.key, rowIndex, sub.key, newValue || "");
+                                  }}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      label={sub.name}
+                                      margin="normal"
+                                      fullWidth
+                                      size="small"
+                                      // Display the item-specific error
+                                      error={!!errors[`item-${rowIndex}`]}
+                                      helperText={errors[`item-${rowIndex}`]}
+                                    />
+                                  )}
+                                />
+                              ) : (
+                                // This is the original logic for all other fields
+                                renderSimpleField(
+                                  sub,
+                                  row[sub.key],
+                                  (val) => handleListChange(field.key, rowIndex, sub.key, val)
+                                )
                               )}
-                              {errors[`item-${rowIndex}`] &&
-                                sub.key === "Item" && (
-                                  <span className="error-text">
-                                    {errors[`item-${rowIndex}`]}
-                                  </span>
-                                )}
+                              {sub.key === "item_qty" && errors[`qty-${rowIndex}`] && (
+                                <span className="error-text">
+                                  {errors[`qty-${rowIndex}`]}
+                                </span>
+                              )}
                             </TableCell>
                           ))}
                         <TableCell>
