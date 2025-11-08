@@ -4,6 +4,59 @@ import { useNavigate } from 'react-router-dom';
 import api from '../axiosConfig.js';
 import "bootstrap/dist/css/bootstrap.min.css";
 
+const defaultConfig = [
+    { name: "Job Number", key: "job_no", type: "number", mandatory: true, options: [], fields: [] },
+    { name: "Customer Phone", key: "customer_phone", type: "text", mandatory: true, options: [], fields: [] },
+    { name: "Customer Name", key: "customer_name", type: "text", mandatory: true, options: [], fields: [] },
+    {
+        name: "Jobcard Status",
+        key: "jobcard_status",
+        type: "dropdown",
+        mandatory: true,
+        options: [
+            { value: "Pending", displayByDefault: true, color: "#ffcc00" },
+            { value: "In Progress", displayByDefault: false, color: "#00bfff" },
+            { value: "Completed", displayByDefault: false, color: "#4caf50" },
+        ],
+        fields: [],
+    },
+    {
+        name: "Items",
+        key: "items",
+        type: "list",
+        mandatory: true,
+        options: [],
+        fields: [
+            { name: "Item Name", key: "item_name", type: "text", mandatory: true, options: [], fields: [] },
+            { name: "Item Qty", key: "item_qty", type: "number", mandatory: true, options: [], fields: [] },
+            {
+                name: "Item Status",
+                key: "item_status",
+                type: "dropdown",
+                mandatory: true,
+                options: [
+                    { value: "Pending", color: "#ffcc00" },
+                    { value: "In Progress", color: "#00bfff" },
+                    { value: "Completed", color: "#4caf50" },
+                ],
+                fields: [],
+            },
+            {
+                name: "Parts",
+                key: "parts",
+                type: "list",
+                mandatory: true,
+                options: [],
+                fields: [
+                    { name: "Part Name", key: "part_name", type: "text", mandatory: true, options: [], fields: [] },
+                    { name: "Part Price", key: "part_price", type: "number", mandatory: true, options: [], fields: [] },
+                    { name: "Part Qty", key: "part_qty", type: "number", mandatory: true, options: [], fields: [] },
+                ],
+            },
+        ],
+    },
+];
+
 export default function SignIn() {
     const navigate = useNavigate();
     const [isSignUp, setIsSignUp] = useState(false);
@@ -30,7 +83,7 @@ export default function SignIn() {
         e.preventDefault();
         setError("");
         try {
-            await api.post("/api/signin", signInData).then((resp) => {
+            await api.post("/api/signin", signInData).then(async (resp) => { // <-- Added 'async' here
                 if (resp.status === 204) {
                     alert("Account not approved by owner. Contact 9601613653");
                     return;
@@ -39,12 +92,33 @@ export default function SignIn() {
                     alert("Welcome " + resp.data.user.name);
                     sessionStorage.setItem("token", resp.data.token);
                     sessionStorage.setItem("userName", resp.data.user.name);
+
+                    // --- MODIFIED LOGIC ---
+                    const token = resp.data.token; // Get the new token
+
                     if (!resp.data.schemaConfigured) {
-                        navigate("/config");
-                    }
-                    else {
+                        // This is a new user. Save the default schema for them.
+                        try {
+                            // Use the token we *just* received to save the default config
+                            await api.post("/user/save-config",
+                                { schema: defaultConfig }, // Send the defaultConfig
+                                { headers: { authorization: `Bearer ${token}` } }
+                            );
+
+                            // Now that the schema is saved, proceed to dashboard
+                            navigate("/dashboard");
+
+                        } catch (configErr) {
+                            // Handle the case where saving the config fails
+                            console.error("Failed to save default config:", configErr);
+                            setError("Sign in successful, but failed to save default settings. Please contact support.");
+                            // Don't navigate, stay on the login page and show the error.
+                        }
+                    } else {
+                        // This is an existing user with a schema.
                         navigate("/dashboard");
                     }
+                    // --- END OF MODIFIED LOGIC ---
                 }
             });
         } catch (err) {
@@ -55,7 +129,7 @@ export default function SignIn() {
             else if (err.response?.status === 404) {
                 alert("No user found with this email.");
             }
-            else{
+            else {
                 alert("Something went wrong!!");
             }
         }

@@ -634,7 +634,7 @@ export default function JobCardDetails() {
                       <TableCell>Action</TableCell>
                     </TableRow>
                   </TableHead>
-                  
+
                   <TableBody>
                     {(formData[activeParts.parentKey]?.[activeParts.rowIndex].parts || []).map(
                       (p, idx) => (
