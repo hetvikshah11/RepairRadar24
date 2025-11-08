@@ -83,7 +83,7 @@ export default function SignIn() {
         e.preventDefault();
         setError("");
         try {
-            await api.post("/api/signin", signInData).then(async (resp) => { // <-- Added 'async' here
+            await api.post("/api/signin", signInData).then(async (resp) => {
                 if (resp.status === 204) {
                     alert("Account not approved by owner. Contact 9601613653");
                     return;
@@ -93,32 +93,24 @@ export default function SignIn() {
                     sessionStorage.setItem("token", resp.data.token);
                     sessionStorage.setItem("userName", resp.data.user.name);
 
-                    // --- MODIFIED LOGIC ---
-                    const token = resp.data.token; // Get the new token
+                    const token = resp.data.token;
 
                     if (!resp.data.schemaConfigured) {
-                        // This is a new user. Save the default schema for them.
                         try {
-                            // Use the token we *just* received to save the default config
                             await api.post("/user/save-config",
-                                { schema: defaultConfig }, // Send the defaultConfig
+                                { schema: defaultConfig },
                                 { headers: { authorization: `Bearer ${token}` } }
                             );
 
-                            // Now that the schema is saved, proceed to dashboard
                             navigate("/dashboard");
 
                         } catch (configErr) {
-                            // Handle the case where saving the config fails
                             console.error("Failed to save default config:", configErr);
                             setError("Sign in successful, but failed to save default settings. Please contact support.");
-                            // Don't navigate, stay on the login page and show the error.
                         }
                     } else {
-                        // This is an existing user with a schema.
                         navigate("/dashboard");
                     }
-                    // --- END OF MODIFIED LOGIC ---
                 }
             });
         } catch (err) {

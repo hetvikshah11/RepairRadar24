@@ -5,13 +5,11 @@ import { useNavigate } from "react-router-dom";
 import { FaPen, FaPlus, FaTrash, FaEdit, FaSave } from "react-icons/fa";
 import Navbar from "../Navbar/Navbar";
 
-// --- HELPER COMPONENTS (STILL NEEDED) ---
 
 const generateKey = (name) => {
     return name.trim().toLowerCase().replace(/\s+/g, "_");
 };
 
-// Recursive field configuration component
 const FieldConfig = ({ fields, setFields, level = 0 }) => {
     const addField = () => {
         const newField = {
@@ -198,7 +196,6 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
     );
 };
 
-// 🚀 FIX: defaultConfig is moved OUTSIDE the component to prevent re-creation
 const defaultConfig = [
     { name: "Job Number", key: "job_no", type: "number", mandatory: true, options: [], fields: [] },
     { name: "Customer Phone", key: "customer_phone", type: "text", mandatory: true, options: [], fields: [] },
@@ -252,8 +249,6 @@ const defaultConfig = [
     },
 ];
 
-// --- MAIN SETTINGS COMPONENT ---
-
 const Settings = () => {
     const [activeTab, setActiveTab] = useState("personal");
 
@@ -266,7 +261,6 @@ const Settings = () => {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-    // WhatsApp Messages
     const [messages, setMessages] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [messageName, setMessageName] = useState("");
@@ -274,28 +268,22 @@ const Settings = () => {
     const [editingMessageId, setEditingMessageId] = useState(null);
     const customTextRef = useRef(null);
 
-    // Jobcard Schema (for modal)
     const [jobCardSchema, setJobCardSchema] = useState(null);
 
-    // Customer Details
     const [customers, setCustomers] = useState([]);
 
-    // Saved Items
     const [itemName, setItemName] = useState("");
     const [savedItems, setSavedItems] = useState([]);
 
-    // Saved Parts
     const [partName, setPartName] = useState("");
     const [partPrice, setPartPrice] = useState("");
     const [savedParts, setSavedParts] = useState([]);
     const [editingPartId, setEditingPartId] = useState(null);
 
-    // State for Jobcard Config
     const [fields, setFields] = useState([]);
 
     const navigate = useNavigate();
 
-    // 🚀 FIX: useEffect dependency array corrected, functions un-commented
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         if (!token) {
@@ -311,12 +299,12 @@ const Settings = () => {
         }
 
         fetchMessages();
-        fetchSchema(); // This is for the WhatsApp modal fields
+        fetchSchema();
         fetchCustomers();
         fetchSavedItems();
         fetchSavedParts();
         fetchJobCardConfig();
-    }, [navigate]); // Dependency array is now correct, won't cause loop
+    }, [navigate]);
 
     const fetchMessages = async () => {
         try {
@@ -445,7 +433,7 @@ const Settings = () => {
             if (res.data.success) {
                 alert("Item added successfully.");
                 setSavedItems([...savedItems, res.data.item]);
-                setItemName(""); // Clear the input
+                setItemName("");
             } else {
                 alert(res.data.message || "Failed to add item.");
             }
@@ -504,7 +492,6 @@ const Settings = () => {
         try {
             let res;
             if (editingPartId) {
-                // Update existing part
                 res = await api.put(`/user/parts/${editingPartId}`, payload, {
                     headers: { authorization: `Bearer ${token}` },
                 });
@@ -515,7 +502,6 @@ const Settings = () => {
                     ));
                 }
             } else {
-                // Add new part
                 res = await api.post("/user/parts", payload, {
                     headers: { authorization: `Bearer ${token}` },
                 });
@@ -545,7 +531,7 @@ const Settings = () => {
         setEditingPartId(part._id);
         setPartName(part.part_name);
         setPartPrice(part.part_price);
-        window.scrollTo(0, 0); // Scroll to top to see the form
+        window.scrollTo(0, 0);
     };
 
     const handleDeletePart = async (id) => {
@@ -596,7 +582,6 @@ const Settings = () => {
     };
 
     const fetchSchema = async () => {
-        // This schema is for the WhatsApp modal
         try {
             const token = sessionStorage.getItem("token");
             const res = await api.get("/user/get-config", {
