@@ -8,257 +8,256 @@ import Navbar from "../Navbar/Navbar";
 // --- HELPER COMPONENTS ---
 
 const generateKey = (name) => {
-    return name.trim().toLowerCase().replace(/\s+/g, "_");
+  return name.trim().toLowerCase().replace(/\s+/g, "_");
 };
 
 const FieldConfig = ({ fields, setFields, level = 0 }) => {
-    // ... (All the code for FieldConfig remains exactly the same) ...
-    const addField = () => {
-        const newField = {
-            name: "",
-            key: "",
-            type: "text",
-            options: [],
-            fields: [],
-            mandatory: false,
-        };
-        setFields([...fields, newField]);
+  // ... (All the code for FieldConfig remains exactly the same) ...
+  const addField = () => {
+    const newField = {
+      name: "",
+      key: "",
+      type: "text",
+      options: [],
+      fields: [],
+      mandatory: false,
     };
+    setFields([...fields, newField]);
+  };
 
-    const updateField = (index, key, value) => {
-        const updated = [...fields];
-        updated[index][key] = value;
-        if (key === "name") {
-            updated[index].key = generateKey(value);
-        }
-        setFields(updated);
-    };
+  const updateField = (index, key, value) => {
+    const updated = [...fields];
+    updated[index][key] = value;
+    if (key === "name") {
+      updated[index].key = generateKey(value);
+    }
+    setFields(updated);
+  };
 
-    const addOption = (index) => {
-        const updated = [...fields];
-        updated[index].options.push({ value: "", color: "#ffffff" });
-        setFields(updated);
-    };
+  const addOption = (index) => {
+    const updated = [...fields];
+    updated[index].options.push({ value: "", color: "#ffffff" });
+    setFields(updated);
+  };
 
-    const updateOption = (fieldIndex, optIndex, key, value) => {
-        const updated = [...fields];
-        updated[fieldIndex].options[optIndex][key] = value;
-        setFields(updated);
-    };
+  const updateOption = (fieldIndex, optIndex, key, value) => {
+    const updated = [...fields];
+    updated[fieldIndex].options[optIndex][key] = value;
+    setFields(updated);
+  };
 
-    const removeOption = (fieldIndex, optIndex) => {
-        const updated = [...fields];
-        updated[fieldIndex].options.splice(optIndex, 1);
-        setFields(updated);
-    };
+  const removeOption = (fieldIndex, optIndex) => {
+    const updated = [...fields];
+    updated[fieldIndex].options.splice(optIndex, 1);
+    setFields(updated);
+  };
 
-    const removeField = (index) => {
-        const field = fields[index];
-        if (field.mandatory) {
-            alert(`The field "${field.name}" is mandatory and cannot be removed.`);
-            return;
-        }
-        setFields(fields.filter((_, i) => i !== index));
-    };
+  const removeField = (index) => {
+    const field = fields[index];
+    if (field.mandatory) {
+      alert(`The field "${field.name}" is mandatory and cannot be removed.`);
+      return;
+    }
+    setFields(fields.filter((_, i) => i !== index));
+  };
 
-    const moveField = (index, direction) => {
-        const updated = [...fields];
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= fields.length) return;
-        [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
-        setFields(updated);
-    };
+  const moveField = (index, direction) => {
+    const updated = [...fields];
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= fields.length) return;
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+    setFields(updated);
+  };
 
-    return (
-        <div className={`field-group level-${level}`}>
-            {fields.map((field, index) => (
-                <div key={index} className="field-item">
-                    <div className="field-row">
-                        <input
-                            type="text"
-                            className="field-input"
-                            placeholder="Field Name"
-                            value={field.name}
-                            onChange={(e) => updateField(index, "name", e.target.value)}
-                            disabled={field.mandatory}
-                        />
-                        <span className="field-key">({field.key})</span>
-                        <button
-                            type="button"
-                            className="move-btn"
-                            onClick={() => moveField(index, -1)}
-                            disabled={index === 0}
-                        >
-                            ↑
-                        </button>
-                        <button
-                            type="button"
-                            className="move-btn"
-                            onClick={() => moveField(index, 1)}
-                            disabled={index === fields.length - 1}
-                        >
-                            ↓
-                        </button>
-                        {!field.mandatory && (
-                            <button
-                                type="button"
-                                className="remove-btn"
-                                onClick={() => removeField(index)}
-                            >
-                                Remove
-                            </button>
-                        )}
-                    </div>
-                    {field.type === "dropdown" && (
-                        <div className="options-section">
-                            <button
-                                type="button"
-                                className="add-option-btn"
-                                onClick={() => addOption(index)}
-                            >
-                                + Add Option
-                            </button>
-                            {field.options.map((opt, optIndex) => (
-                                <div key={optIndex} className="option-row">
-                                    <input
-                                        type="text"
-                                        className="option-input"
-                                        placeholder={`Option ${optIndex + 1}`}
-                                        value={opt.value}
-                                        onChange={(e) =>
-                                            updateOption(index, optIndex, "value", e.target.value)
-                                        }
-                                    />
-                                    <label className="color-picker-label">
-                                        🎨 Color:
-                                        <input
-                                            type="color"
-                                            className="color-input"
-                                            value={opt.color || "#cccccc"}
-                                            onChange={(e) =>
-                                                updateOption(index, optIndex, "color", e.target.value)
-                                            }
-                                            title="Click to select a color for this status"
-                                        />
-                                    </label>
-                                    {field.key === "jobcard_status" && (
-                                        <label className="checkbox-label">
-                                            <input
-                                                type="checkbox"
-                                                checked={opt.displayByDefault || false}
-                                                onChange={(e) =>
-                                                    updateOption(
-                                                        index,
-                                                        optIndex,
-                                                        "displayByDefault",
-                                                        e.target.checked
-                                                    )
-                                                }
-                                            />
-                                            Display by Default
-                                        </label>
-                                    )}
-                                    <button
-                                        type="button"
-                                        className="remove-option-btn"
-                                        onClick={() => removeOption(index, optIndex)}
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {field.type === "list" && (
-                        <div className="subfields-section">
-                            <h5 className="subfields-title">Subfields for "{field.name}"</h5>
-                            <FieldConfig
-                                fields={field.fields}
-                                setFields={(newSubfields) => {
-                                    const updated = [...fields];
-                                    updated[index].fields = newSubfields;
-                                    setFields(updated);
-                                }}
-                                level={level + 1}
-                            />
-                        </div>
-                    )}
-                    {field.key === "jobcard_status" && (
-                        <p className="status-hint">
-                            ⚠️ This field decides which jobcards are shown on the dashboard.
-                            Jobs with statuses marked as <b>Display by Default</b> will appear on load.
-                        </p>
-                    )}
-                </div>
-            ))}
-            <button type="button" className="add-field-btn" onClick={addField}>
-                + Add Field
+  return (
+    <div className={`field-group level-${level}`}>
+      {fields.map((field, index) => (
+        <div key={index} className="field-item">
+          <div className="field-row">
+            <input
+              type="text"
+              className="field-input"
+              placeholder="Field Name"
+              value={field.name}
+              onChange={(e) => updateField(index, "name", e.target.value)}
+              disabled={field.mandatory}
+            />
+            <span className="field-key">({field.key})</span>
+            <button
+              type="button"
+              className="move-btn"
+              onClick={() => moveField(index, -1)}
+              disabled={index === 0}
+            >
+              ↑
             </button>
+            <button
+              type="button"
+              className="move-btn"
+              onClick={() => moveField(index, 1)}
+              disabled={index === fields.length - 1}
+            >
+              ↓
+            </button>
+            {!field.mandatory && (
+              <button
+                type="button"
+                className="remove-btn"
+                onClick={() => removeField(index)}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {field.type === "dropdown" && (
+            <div className="options-section">
+              <button
+                type="button"
+                className="add-option-btn"
+                onClick={() => addOption(index)}
+              >
+                + Add Option
+              </button>
+              {field.options.map((opt, optIndex) => (
+                <div key={optIndex} className="option-row">
+                  <input
+                    type="text"
+                    className="option-input"
+                    placeholder={`Option ${optIndex + 1}`}
+                    value={opt.value}
+                    onChange={(e) =>
+                      updateOption(index, optIndex, "value", e.target.value)
+                    }
+                  />
+                  <label className="color-picker-label">
+                    🎨 Color:
+                    <input
+                      type="color"
+                      className="color-input"
+                      value={opt.color || "#cccccc"}
+                      onChange={(e) =>
+                        updateOption(index, optIndex, "color", e.target.value)
+                      }
+                      title="Click to select a color for this status"
+                    />
+                  </label>
+                  {field.key === "jobcard_status" && (
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={opt.displayByDefault || false}
+                        onChange={(e) =>
+                          updateOption(
+                            index,
+                            optIndex,
+                            "displayByDefault",
+                            e.target.checked
+                          )
+                        }
+                      />
+                      Display by Default
+                    </label>
+                  )}
+                  <button
+                    type="button"
+                    className="remove-option-btn"
+                    onClick={() => removeOption(index, optIndex)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {field.type === "list" && (
+            <div className="subfields-section">
+              <h5 className="subfields-title">Subfields for "{field.name}"</h5>
+              <FieldConfig
+                fields={field.fields}
+                setFields={(newSubfields) => {
+                  const updated = [...fields];
+                  updated[index].fields = newSubfields;
+                  setFields(updated);
+                }}
+                level={level + 1}
+              />
+            </div>
+          )}
+          {field.key === "jobcard_status" && (
+            <p className="status-hint">
+              ⚠️ This field decides which jobcards are shown on the dashboard.
+              Jobs with statuses marked as <b>Display by Default</b> will appear on load.
+            </p>
+          )}
         </div>
-    );
+      ))}
+      <button type="button" className="add-field-btn" onClick={addField}>
+        + Add Field
+      </button>
+    </div>
+  );
 };
 
 // --- CONSTANTS ---
 
 const defaultConfig = [
-    // ... (defaultConfig array unchanged) ...
-    { name: "Job Number", key: "job_no", type: "number", mandatory: true, options: [], fields: [] },
-    { name: "Customer Phone", key: "customer_phone", type: "text", mandatory: true, options: [], fields: [] },
-    { name: "Customer Name", key: "customer_name", type: "text", mandatory: true, options: [], fields: [] },
-    {
-        name: "Jobcard Status",
-        key: "jobcard_status",
+  // ... (defaultConfig array unchanged) ...
+  { name: "Job Number", key: "job_no", type: "number", mandatory: true, options: [], fields: [] },
+  { name: "Customer Phone", key: "customer_phone", type: "text", mandatory: true, options: [], fields: [] },
+  { name: "Customer Name", key: "customer_name", type: "text", mandatory: true, options: [], fields: [] },
+  {
+    name: "Jobcard Status",
+    key: "jobcard_status",
+    type: "dropdown",
+    mandatory: true,
+    options: [
+      { value: "Pending", displayByDefault: true, color: "#ffcc00" },
+      { value: "In Progress", displayByDefault: false, color: "#00bfff" },
+      { value: "Completed", displayByDefault: false, color: "#4caf50" },
+    ],
+    fields: [],
+  },
+  {
+    name: "Items",
+    key: "items",
+    type: "list",
+    mandatory: true,
+    options: [],
+    fields: [
+      { name: "Item Name", key: "item_name", type: "text", mandatory: true, options: [], fields: [] },
+      { name: "Item Qty", key: "item_qty", type: "number", mandatory: true, options: [], fields: [] },
+      {
+        name: "Item Status",
+        key: "item_status",
         type: "dropdown",
         mandatory: true,
         options: [
-            { value: "Pending", displayByDefault: true, color: "#ffcc00" },
-            { value: "In Progress", displayByDefault: false, color: "#00bfff" },
-            { value: "Completed", displayByDefault: false, color: "#4caf50" },
+          { value: "Pending", color: "#ffcc00" },
+          { value: "In Progress", color: "#00bfff" },
+          { value: "Completed", color: "#4caf50" },
         ],
         fields: [],
-    },
-    {
-        name: "Items",
-        key: "items",
+      },
+      {
+        name: "Parts",
+        key: "parts",
         type: "list",
         mandatory: true,
         options: [],
         fields: [
-            { name: "Item Name", key: "item_name", type: "text", mandatory: true, options: [], fields: [] },
-            { name: "Item Qty", key: "item_qty", type: "number", mandatory: true, options: [], fields: [] },
-            {
-                name: "Item Status",
-                key: "item_status",
-                type: "dropdown",
-                mandatory: true,
-                options: [
-                    { value: "Pending", color: "#ffcc00" },
-                    { value: "In Progress", color: "#00bfff" },
-                    { value: "Completed", color: "#4caf50" },
-                ],
-                fields: [],
-            },
-            {
-                name: "Parts",
-                key: "parts",
-                type: "list",
-                mandatory: true,
-                options: [],
-                fields: [
-                    { name: "Part Name", key: "part_name", type: "text", mandatory: true, options: [], fields: [] },
-                    { name: "Part Price", key: "part_price", type: "number", mandatory: true, options: [], fields: [] },
-                    { name: "Part Qty", key: "part_qty", type: "number", mandatory: true, options: [], fields: [] },
-                ],
-            },
+          { name: "Part Name", key: "part_name", type: "text", mandatory: true, options: [], fields: [] },
+          { name: "Part Price", key: "part_price", type: "number", mandatory: true, options: [], fields: [] },
+          { name: "Part Qty", key: "part_qty", type: "number", mandatory: true, options: [], fields: [] },
         ],
-    },
+      },
+    ],
+  },
 ];
 
-// 🚀 NEW: Added plans constant
 const plans = [
     { id: "monthly", title: "Monthly Plan", price: "₹100", duration: "per month" },
     { id: "yearly", title: "Yearly Plan", price: "₹1000", duration: "per year" },
-];
+  ];
 
 // --- MAIN SETTINGS COMPONENT ---
 
@@ -295,42 +294,45 @@ const Settings = () => {
 
     const [fields, setFields] = useState([]);
 
+    // 🚀 NEW: State for the config warning modal
+    const [showConfigWarning, setShowConfigWarning] = useState(false);
+
     const navigate = useNavigate();
 
     useEffect(() => {
-        // ... (useEffect logic unchanged) ...
-        const token = sessionStorage.getItem("token");
-        if (!token) {
-            alert("Please log in first.");
-            navigate("/");
-            return;
-        }
+      // ... (useEffect logic unchanged) ...
+      const token = sessionStorage.getItem("token");
+      if (!token) {
+          alert("Please log in first.");
+          navigate("/");
+          return;
+      }
 
-        const storedName = sessionStorage.getItem("userName");
-        if (storedName) {
-            setName(storedName);
-            setOriginalName(storedName);
-        }
+      const storedName = sessionStorage.getItem("userName");
+      if (storedName) {
+          setName(storedName);
+          setOriginalName(storedName);
+      }
 
-        fetchMessages();
-        fetchSchema();
-        fetchCustomers();
-        fetchSavedItems();
-        fetchSavedParts();
-        fetchJobCardConfig();
+      fetchMessages();
+      fetchSchema();
+      fetchCustomers();
+      fetchSavedItems();
+      fetchSavedParts();
+      fetchJobCardConfig();
     }, [navigate]);
 
     // ... (All fetch functions: fetchMessages, fetchCustomers, etc. remain unchanged) ...
     const fetchMessages = async () => {
-        try {
-            const token = sessionStorage.getItem("token");
-            const res = await api.get("/user/whatsapp/get-messages", {
-                headers: { authorization: `Bearer ${token}` },
-            });
-            setMessages(res.data || []);
-        } catch (err) {
-            console.error("Error fetching messages:", err);
-        }
+      try {
+          const token = sessionStorage.getItem("token");
+          const res = await api.get("/user/whatsapp/get-messages", {
+              headers: { authorization: `Bearer ${token}` },
+          });
+          setMessages(res.data || []);
+      } catch (err) {
+          console.error("Error fetching messages:", err);
+      }
     };
 
     const fetchCustomers = async () => {
@@ -411,25 +413,25 @@ const Settings = () => {
 
     // ... (All handler functions: saveConfig, handleAddItem, etc. remain unchanged) ...
     const saveConfig = async () => {
-        const token = sessionStorage.getItem("token");
-        await api
-            .post("/user/save-config", { schema: fields }, { headers: { authorization: `Bearer ${token}` } })
-            .then((resp) => {
-                if (resp.status === 200) {
-                    alert(resp.data.message);
-                }
-            })
-            .catch((err) => {
-                if (err.status === 401) {
-                    alert("Unauthorized. Please log in again.");
-                    navigate("/");
-                } else {
-                    console.error("Error saving configuration:", err);
-                    alert("Failed to save configuration. Please try again.");
-                }
-            });
+      const token = sessionStorage.getItem("token");
+      await api
+          .post("/user/save-config", { schema: fields }, { headers: { authorization: `Bearer ${token}` } })
+          .then((resp) => {
+              if (resp.status === 200) {
+                  alert(resp.data.message);
+              }
+          })
+          .catch((err) => {
+              if (err.status === 401) {
+                  alert("Unauthorized. Please log in again.");
+                  navigate("/");
+              } else {
+                  console.error("Error saving configuration:", err);
+                  alert("Failed to save configuration. Please try again.");
+              }
+          });
     };
-
+  
     const handleAddItem = async (e) => {
         e.preventDefault();
         const trimmedItemName = itemName.trim();
@@ -455,7 +457,7 @@ const Settings = () => {
             alert(err.response?.data?.message || "Failed to add item.");
         }
     };
-
+  
     const handleDeleteItem = async (id) => {
         if (!window.confirm("Are you sure you want to delete this item?")) return;
         try {
@@ -476,13 +478,13 @@ const Settings = () => {
             alert(err.response?.data?.message || "Failed to delete item.");
         }
     };
-
+  
     const clearPartForm = () => {
         setPartName("");
         setPartPrice("");
         setEditingPartId(null);
     };
-
+  
     const handleSavePart = async (e) => {
         e.preventDefault();
         const trimmedPartName = partName.trim();
@@ -533,14 +535,14 @@ const Settings = () => {
             alert(err.response?.data?.message || "Failed to save part.");
         }
     };
-
+  
     const handleEditPart = (part) => {
         setEditingPartId(part._id);
         setPartName(part.part_name);
         setPartPrice(part.part_price);
         window.scrollTo(0, 0);
     };
-
+  
     const handleDeletePart = async (id) => {
         if (!window.confirm("Are you sure you want to delete this part?")) return;
         try {
@@ -561,7 +563,7 @@ const Settings = () => {
             alert(err.response?.data?.message || "Failed to delete part.");
         }
     };
-
+  
     const handleDeleteCustomer = async (id) => {
         if (!window.confirm("Are you sure you want to delete this customer?")) return;
         try {
@@ -582,7 +584,7 @@ const Settings = () => {
             alert(err.response?.data?.message || "Failed to delete customer.");
         }
     };
-
+  
     const fetchSchema = async () => {
         try {
             const token = sessionStorage.getItem("token");
@@ -598,177 +600,177 @@ const Settings = () => {
             console.error("Error fetching schema:", err);
         }
     };
-
+  
     const getRelevantFields = (schema) => {
-        // ... (getRelevantFields function unchanged) ...
-        if (!schema?.schema) return [];
-        const usefulKeys = ["job_no", "customer_name", "customer_phone", "item_name", "item_qty", "item_serial"];
-        const fields = [];
-        schema.schema.forEach((field) => {
-            if (usefulKeys.includes(field.key)) {
-                fields.push({ name: field.name, key: field.key });
-            }
-            if (field.key === "items" && Array.isArray(field.fields)) {
-                field.fields.forEach((subField) => {
-                    if (usefulKeys.includes(subField.key)) {
-                        fields.push({ name: subField.name, key: subField.key });
-                    }
-                });
-            }
-        });
-        return fields;
+      // ... (getRelevantFields function unchanged) ...
+      if (!schema?.schema) return [];
+      const usefulKeys = [ "job_no", "customer_name", "customer_phone", "item_name", "item_qty", "item_serial" ];
+      const fields = [];
+      schema.schema.forEach((field) => {
+          if (usefulKeys.includes(field.key)) {
+              fields.push({ name: field.name, key: field.key });
+          }
+          if (field.key === "items" && Array.isArray(field.fields)) {
+              field.fields.forEach((subField) => {
+                  if (usefulKeys.includes(subField.key)) {
+                      fields.push({ name: subField.name, key: subField.key });
+                  }
+              });
+          }
+      });
+      return fields;
     };
-
+  
     const handleSaveMessage = async () => {
-        // ... (handleSaveMessage function unchanged) ...
-        if (!messageName.trim()) {
-            alert("Please enter a message name.");
-            return;
-        }
-        const token = sessionStorage.getItem("token");
-        if (!token) return navigate("/");
-        try {
-            const payload = {
-                name: messageName.trim(),
-                text: customText.replace(/\n/g, "\\n").trim(),
-            };
-            let res;
-            if (editingMessageId) {
-                res = await api.put(
-                    `/user/whatsapp/update-message/${editingMessageId}`,
-                    payload,
-                    { headers: { authorization: `Bearer ${token}` } }
-                );
-            } else {
-                res = await api.post("/user/whatsapp/create-message/", payload, {
-                    headers: { authorization: `Bearer ${token}` },
-                });
-            }
-            if (res.status === 200 || res.status === 201) {
-                alert(`Message ${editingMessageId ? "updated" : "created"} successfully`);
-                setShowModal(false);
-                setEditingMessageId(null);
-                setMessageName("");
-                setCustomText("");
-                fetchMessages();
-            }
-        } catch (err) {
-            console.error("Error saving message:", err);
-            alert("Failed to save message.");
-        }
+      // ... (handleSaveMessage function unchanged) ...
+      if (!messageName.trim()) {
+          alert("Please enter a message name.");
+          return;
+      }
+      const token = sessionStorage.getItem("token");
+      if (!token) return navigate("/");
+      try {
+          const payload = {
+              name: messageName.trim(),
+              text: customText.replace(/\n/g, "\\n").trim(),
+          };
+          let res;
+          if (editingMessageId) {
+              res = await api.put(
+                  `/user/whatsapp/update-message/${editingMessageId}`,
+                  payload,
+                  { headers: { authorization: `Bearer ${token}` } }
+              );
+          } else {
+              res = await api.post("/user/whatsapp/create-message/", payload, {
+                  headers: { authorization: `Bearer ${token}` },
+              });
+          }
+          if (res.status === 200 || res.status === 201) {
+              alert(`Message ${editingMessageId ? "updated" : "created"} successfully`);
+              setShowModal(false);
+              setEditingMessageId(null);
+              setMessageName("");
+              setCustomText("");
+              fetchMessages();
+          }
+      } catch (err) {
+          console.error("Error saving message:", err);
+          alert("Failed to save message.");
+      }
     };
-
+  
     const handleDeleteMessage = async (id) => {
-        // ... (handleDeleteMessage function unchanged) ...
-        if (!window.confirm("Are you sure you want to delete this message?")) return;
-        try {
-            const token = sessionStorage.getItem("token");
-            await api.delete(`/user/whatsapp/delete-message/${id}`, {
-                headers: { authorization: `Bearer ${token}` },
-            });
-            setMessages(messages.filter((m) => m._id !== id));
-        } catch (err) {
-            console.error("Error deleting message:", err);
-            alert("Failed to delete message.");
-        }
+      // ... (handleDeleteMessage function unchanged) ...
+      if (!window.confirm("Are you sure you want to delete this message?")) return;
+      try {
+          const token = sessionStorage.getItem("token");
+          await api.delete(`/user/whatsapp/delete-message/${id}`, {
+              headers: { authorization: `Bearer ${token}` },
+          });
+          setMessages(messages.filter((m) => m._id !== id));
+      } catch (err) {
+          console.error("Error deleting message:", err);
+          alert("Failed to delete message.");
+      }
     };
-
+  
     const openEditModal = (msg) => {
-        // ... (openEditModal function unchanged) ...
-        setEditingMessageId(msg._id);
-        setMessageName(msg.name);
-        setCustomText(msg.text);
-        setShowModal(true);
+      // ... (openEditModal function unchanged) ...
+      setEditingMessageId(msg._id);
+      setMessageName(msg.name);
+      setCustomText(msg.text);
+      setShowModal(true);
     };
-
+  
     const handleNameChange = async (e) => {
-        // ... (handleNameChange function unchanged) ...
-        e.preventDefault();
-        try {
-            const token = sessionStorage.getItem("token");
-            if (!token) navigate("/");
-            const resp = await api.put(
-                "/api/update-name",
-                { name },
-                { headers: { authorization: `Bearer ${token}` } }
-            );
-            if (resp.status === 200) {
-                alert("Name updated successfully to " + resp.data.name);
-                sessionStorage.setItem("userName", resp.data.name);
-                setName(resp.data.name);
-                setOriginalName(resp.data.name);
-                setIsEditingName(false);
-            }
-        } catch (err) {
-            console.error("Error updating business name:", err);
-        }
+      // ... (handleNameChange function unchanged) ...
+      e.preventDefault();
+      try {
+          const token = sessionStorage.getItem("token");
+          if (!token) navigate("/");
+          const resp = await api.put(
+              "/api/update-name",
+              { name },
+              { headers: { authorization: `Bearer ${token}` } }
+          );
+          if (resp.status === 200) {
+              alert("Name updated successfully to " + resp.data.name);
+              sessionStorage.setItem("userName", resp.data.name);
+              setName(resp.data.name);
+              setOriginalName(resp.data.name);
+              setIsEditingName(false);
+          }
+      } catch (err) {
+          console.error("Error updating business name:", err);
+      }
     };
-
+  
     const handleVerifyPassword = async (e) => {
-        // ... (handleVerifyPassword function unchanged) ...
-        e.preventDefault();
-        try {
-            const token = sessionStorage.getItem("token");
-            if (!token) navigate("/");
-            const resp = await api.post(
-                "/api/verify-password",
-                { currentPassword },
-                { headers: { authorization: `Bearer ${token}` } }
-            );
-            if (resp.status === 200 && resp.data.verified) {
-                alert("Password verified successfully.");
-                setIsVerified(true);
-            } else {
-                alert("Incorrect password. Please try again.");
-            }
-        } catch (err) {
-            console.error("Error verifying password:", err);
-            alert(err.response?.data?.message || "Verification failed.");
-        }
+      // ... (handleVerifyPassword function unchanged) ...
+      e.preventDefault();
+      try {
+          const token = sessionStorage.getItem("token");
+          if (!token) navigate("/");
+          const resp = await api.post(
+              "/api/verify-password",
+              { currentPassword },
+              { headers: { authorization: `Bearer ${token}` } }
+          );
+          if (resp.status === 200 && resp.data.verified) {
+              alert("Password verified successfully.");
+              setIsVerified(true);
+          } else {
+              alert("Incorrect password. Please try again.");
+          }
+      } catch (err) {
+          console.error("Error verifying password:", err);
+          alert(err.response?.data?.message || "Verification failed.");
+      }
     };
-
+  
     const handlePasswordChange = async (e) => {
-        // ... (handlePasswordChange function unchanged) ...
-        e.preventDefault();
-        if (password !== confirmPassword) {
-            alert("Passwords do not match!");
-            return;
-        }
-        try {
-            const token = sessionStorage.getItem("token");
-            if (!token) navigate("/");
-            const resp = await api.put(
-                "/api/update-password",
-                { password },
-                { headers: { authorization: `Bearer ${token}` } }
-            );
-            if (resp.status === 200) {
-                alert("Password updated successfully.");
-                setCurrentPassword("");
-                setPassword("");
-                setConfirmPassword("");
-                setIsVerified(false);
-            }
-        } catch (err) {
-            console.error("Error updating password:", err);
-            alert(err.response?.data?.message || "Password update failed.");
-        }
+      // ... (handlePasswordChange function unchanged) ...
+      e.preventDefault();
+      if (password !== confirmPassword) {
+          alert("Passwords do not match!");
+          return;
+      }
+      try {
+          const token = sessionStorage.getItem("token");
+          if (!token) navigate("/");
+          const resp = await api.put(
+              "/api/update-password",
+              { password },
+              { headers: { authorization: `Bearer ${token}` } }
+          );
+          if (resp.status === 200) {
+              alert("Password updated successfully.");
+              setCurrentPassword("");
+              setPassword("");
+              setConfirmPassword("");
+              setIsVerified(false);
+          }
+      } catch (err) {
+          console.error("Error updating password:", err);
+          alert(err.response?.data?.message || "Password update failed.");
+      }
     };
-
+  
     const insertField = (key) => {
-        // ... (insertField function unchanged) ...
-        if (!customTextRef.current) return;
-        const textarea = customTextRef.current;
-        const cursorPos = textarea.selectionStart;
-        const textBefore = customText.slice(0, cursorPos);
-        const textAfter = customText.slice(cursorPos);
-        const newText = `${textBefore}{${key}}${textAfter}`;
-        setCustomText(newText);
-        setTimeout(() => {
-            const newCursorPos = cursorPos + key.length + 2;
-            textarea.focus();
-            textarea.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
+      // ... (insertField function unchanged) ...
+      if (!customTextRef.current) return;
+      const textarea = customTextRef.current;
+      const cursorPos = textarea.selectionStart;
+      const textBefore = customText.slice(0, cursorPos);
+      const textAfter = customText.slice(cursorPos);
+      const newText = `${textBefore}{${key}}${textAfter}`;
+      setCustomText(newText);
+      setTimeout(() => {
+          const newCursorPos = cursorPos + key.length + 2;
+          textarea.focus();
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
     };
 
     return (
@@ -807,13 +809,18 @@ const Settings = () => {
                     >
                         Saved Parts
                     </button>
+
+                    {/* 🚀 MODIFIED: This button now also triggers the warning modal */}
                     <button
                         className={`tab-btn ${activeTab === "jobcard" ? "active" : ""}`}
-                        onClick={() => setActiveTab("jobcard")}
+                        onClick={() => {
+                            setActiveTab("jobcard");
+                            setShowConfigWarning(true); // <-- Set warning modal to true
+                        }}
                     >
                         Customise Jobcard fields
                     </button>
-                    {/* 🚀 NEW: Subscription Tab Button */}
+                    
                     <button
                         className={`tab-btn ${activeTab === "subscription" ? "active" : ""}`}
                         onClick={() => setActiveTab("subscription")}
@@ -826,381 +833,407 @@ const Settings = () => {
                 <div className="settings-right">
                     {activeTab === "personal" && (
                         <>
-                            {/* ... (personal tab JSX unchanged) ... */}
-                            <h2>Personal Information</h2>
-                            <hr />
-                            <form onSubmit={handleNameChange} className="settings-form">
-                                <label>Change Name</label>
-                                <div className="input-with-icon">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter new name"
-                                        value={name}
-                                        disabled={!isEditingName}
-                                        onChange={(e) => setName(e.target.value)}
-                                        className="light-input"
-                                    />
-                                    <button
-                                        type="button"
-                                        className="edit-btn"
-                                        onClick={() => setIsEditingName(true)}
-                                    >
-                                        <FaPen />
-                                    </button>
-                                </div>
+                          {/* ... (personal tab JSX unchanged) ... */}
+                          <h2>Personal Information</h2>
+                          <hr />
+                          <form onSubmit={handleNameChange} className="settings-form">
+                            <label>Change Name</label>
+                            <div className="input-with-icon">
+                                <input
+                                    type="text"
+                                    placeholder="Enter new name"
+                                    value={name}
+                                    disabled={!isEditingName}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="light-input"
+                                />
                                 <button
-                                    type="submit"
-                                    disabled={name === originalName}
-                                    className="update-btn"
+                                    type="button"
+                                    className="edit-btn"
+                                    onClick={() => setIsEditingName(true)}
                                 >
-                                    Update Name
+                                    <FaPen />
                                 </button>
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={name === originalName}
+                                className="update-btn"
+                            >
+                                Update Name
+                            </button>
+                          </form>
+                          <div className="settings-form">
+                            <label>Change Password</label>
+                            <form onSubmit={handleVerifyPassword} className="settings-form">
+                                <input
+                                    type="password"
+                                    placeholder="Enter current password"
+                                    value={currentPassword}
+                                    disabled={isVerified}
+                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                    className="light-input"
+                                />
+                                {!isVerified && (
+                                    <button type="submit" className="update-btn">
+                                        Verify
+                                    </button>
+                                )}
                             </form>
-                            <div className="settings-form">
-                                <label>Change Password</label>
-                                <form onSubmit={handleVerifyPassword} className="settings-form">
+                            {isVerified && (
+                                <form onSubmit={handlePasswordChange} className="settings-form">
                                     <input
                                         type="password"
-                                        placeholder="Enter current password"
-                                        value={currentPassword}
-                                        disabled={isVerified}
-                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        placeholder="Enter new password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
                                         className="light-input"
                                     />
-                                    {!isVerified && (
-                                        <button type="submit" className="update-btn">
-                                            Verify
-                                        </button>
-                                    )}
+                                    <input
+                                        type="password"
+                                        placeholder="Confirm new password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="light-input"
+                                    />
+                                    <button type="submit" className="update-btn">
+                                        Update Password
+                                    </button>
                                 </form>
-                                {isVerified && (
-                                    <form onSubmit={handlePasswordChange} className="settings-form">
-                                        <input
-                                            type="password"
-                                            placeholder="Enter new password"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            className="light-input"
-                                        />
-                                        <input
-                                            type="password"
-                                            placeholder="Confirm new password"
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="light-input"
-                                        />
-                                        <button type="submit" className="update-btn">
-                                            Update Password
-                                        </button>
-                                    </form>
-                                )}
-                            </div>
+                            )}
+                          </div>
                         </>
                     )}
 
                     {activeTab === "whatsapp" && (
                         <>
-                            {/* ... (whatsapp tab JSX unchanged) ... */}
-                            <h2>WhatsApp Messages</h2>
-                            <hr />
-                            <div className="whatsapp-scroll">
-                                {messages.map((msg) => (
-                                    <div key={msg._id} className="message-card">
-                                        <h4>{msg.name}</h4>
-                                        <p className="msg-preview">{msg.text.slice(0, 80)}...</p>
-                                        <div className="msg-actions">
-                                            <button className="icon-btn" onClick={() => openEditModal(msg)}>
-                                                <FaEdit />
-                                            </button>
-                                            <button
-                                                className="icon-btn delete-btn"
-                                                onClick={() => handleDeleteMessage(msg._id)}
-                                            >
-                                                <FaTrash />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                <div
-                                    className="message-card create-card"
-                                    onClick={() => setShowModal(true)}
-                                >
-                                    <FaPlus size={24} />
-                                    <span>Create</span>
-                                </div>
-                            </div>
+                          {/* ... (whatsapp tab JSX unchanged) ... */}
+                          <h2>WhatsApp Messages</h2>
+                          <hr />
+                          <div className="whatsapp-scroll">
+                              {messages.map((msg) => (
+                                  <div key={msg._id} className="message-card">
+                                      <h4>{msg.name}</h4>
+                                      <p className="msg-preview">{msg.text.slice(0, 80)}...</p>
+                                      <div className="msg-actions">
+                                          <button className="icon-btn" onClick={() => openEditModal(msg)}>
+                                              <FaEdit />
+                                          </button>
+                                          <button
+                                              className="icon-btn delete-btn"
+                                              onClick={() => handleDeleteMessage(msg._id)}
+                                          >
+                                              <FaTrash />
+                                          </button>
+                                      </div>
+                                  </div>
+                              ))}
+                              <div
+                                  className="message-card create-card"
+                                  onClick={() => setShowModal(true)}
+                              >
+                                  <FaPlus size={24} />
+                                  <span>Create</span>
+                              </div>
+                          </div>
                         </>
                     )}
 
                     {activeTab === "customerdetails" && (
                         <>
-                            {/* ... (customerdetails tab JSX unchanged) ... */}
-                            <h2>Customer Details</h2>
-                            <hr />
-                            <div className="customer-table-container">
-                                <table className="customer-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Customer Name</th>
-                                            <th>Customer Phone</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {customers.length > 0 ? (
-                                            customers.map((customer) => (
-                                                <tr key={customer._id}>
-                                                    <td>{customer.customer_name}</td>
-                                                    <td>{customer.customer_phone}</td>
-                                                    <td>
-                                                        <button
-                                                            className="icon-btn delete-btn"
-                                                            onClick={() => handleDeleteCustomer(customer._id)}
-                                                        >
-                                                            <FaTrash />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="3" style={{ textAlign: "center" }}>
-                                                    No customers found.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                          {/* ... (customerdetails tab JSX unchanged) ... */}
+                          <h2>Customer Details</h2>
+                          <hr />
+                          <div className="customer-table-container">
+                              <table className="customer-table">
+                                  <thead>
+                                      <tr>
+                                          <th>Customer Name</th>
+                                          <th>Customer Phone</th>
+                                          <th>Actions</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {customers.length > 0 ? (
+                                          customers.map((customer) => (
+                                              <tr key={customer._id}>
+                                                  <td>{customer.customer_name}</td>
+                                                  <td>{customer.customer_phone}</td>
+                                                  <td>
+                                                      <button
+                                                          className="icon-btn delete-btn"
+                                                          onClick={() => handleDeleteCustomer(customer._id)}
+                                                      >
+                                                          <FaTrash />
+                                                      </button>
+                                                  </td>
+                                              </tr>
+                                          ))
+                                      ) : (
+                                          <tr>
+                                              <td colSpan="3" style={{ textAlign: "center" }}>
+                                                  No customers found.
+                                              </td>
+                                          </tr>
+                                      )}
+                                  </tbody>
+                              </table>
+                          </div>
                         </>
                     )}
 
                     {activeTab === "saveditems" && (
                         <>
-                            {/* ... (saveditems tab JSX unchanged) ... */}
-                            <h2>Saved Items</h2>
-                            <hr />
-                            <form onSubmit={handleAddItem} className="settings-form saved-item-form">
-                                <label>Add New Item</label>
-                                <div className="input-with-button">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter item name (e.g., Laptop, Mobile)"
-                                        value={itemName}
-                                        onChange={(e) => setItemName(e.target.value)}
-                                        className="light-input"
-                                    />
-                                    <button type="submit" className="add-btn">
-                                        <FaPlus /> Add
-                                    </button>
-                                </div>
-                            </form>
-                            <div className="saved-items-list-container">
-                                <h4>Existing Items</h4>
-                                {savedItems.length > 0 ? (
-                                    <ul className="saved-items-list">
-                                        {savedItems.map((item) => (
-                                            <li key={item._id}>
-                                                <span>{item.item_name}</span>
-                                                <button
-                                                    className="icon-btn delete-btn"
-                                                    onClick={() => handleDeleteItem(item._id)}
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p style={{ textAlign: "center", color: "#888", marginTop: "20px" }}>
-                                        No saved items found.
-                                    </p>
-                                )}
-                            </div>
+                          {/* ... (saveditems tab JSX unchanged) ... */}
+                          <h2>Saved Items</h2>
+                          <hr />
+                          <form onSubmit={handleAddItem} className="settings-form saved-item-form">
+                              <label>Add New Item</label>
+                              <div className="input-with-button">
+                                  <input
+                                      type="text"
+                                      placeholder="Enter item name (e.g., Laptop, Mobile)"
+                                      value={itemName}
+                                      onChange={(e) => setItemName(e.target.value)}
+                                      className="light-input"
+                                  />
+                                  <button type="submit" className="add-btn">
+                                      <FaPlus /> Add
+                                  </button>
+                              </div>
+                          </form>
+                          <div className="saved-items-list-container">
+                              <h4>Existing Items</h4>
+                              {savedItems.length > 0 ? (
+                                  <ul className="saved-items-list">
+                                      {savedItems.map((item) => (
+                                          <li key={item._id}>
+                                              <span>{item.item_name}</span>
+                                              <button
+                                                  className="icon-btn delete-btn"
+                                                  onClick={() => handleDeleteItem(item._id)}
+                                              >
+                                                  <FaTrash />
+                                              </button>
+                                          </li>
+                                      ))}
+                                  </ul>
+                              ) : (
+                                  <p style={{ textAlign: "center", color: "#888", marginTop: "20px" }}>
+                                      No saved items found.
+                                  </p>
+                              )}
+                          </div>
                         </>
                     )}
 
                     {activeTab === "savedparts" && (
                         <>
-                            {/* ... (savedparts tab JSX unchanged) ... */}
-                            <h2>Saved Parts</h2>
-                            <hr />
-                            <form onSubmit={handleSavePart} className="settings-form saved-item-form">
-                                <label>{editingPartId ? "Edit Part" : "Add New Part"}</label>
-                                <div className="input-with-button">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter part name"
-                                        value={partName}
-                                        onChange={(e) => setPartName(e.target.value)}
-                                        className="light-input"
-                                        style={{ flex: 2 }}
-                                    />
-                                    <input
-                                        type="number"
-                                        placeholder="Enter price"
-                                        value={partPrice}
-                                        onChange={(e) => setPartPrice(e.target.value)}
-                                        className="light-input"
-                                        style={{ flex: 1 }}
-                                    />
-                                    <button type="submit" className="add-btn">
-                                        {editingPartId ? <FaSave /> : <FaPlus />}
-                                        {editingPartId ? " Update" : " Save"}
-                                    </button>
-                                    {editingPartId && (
-                                        <button type="button" className="cancel-btn" onClick={clearPartForm}>
-                                            Cancel
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
-                            <div className="customer-table-container" style={{ marginTop: '30px' }}>
-                                <h4>Existing Parts</h4>
-                                <table className="customer-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Part Name</th>
-                                            <th>Part Price</th>
-                                            <th style={{ width: '100px' }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {savedParts.length > 0 ? (
-                                            savedParts.map((part) => (
-                                                <tr key={part._id}>
-                                                    <td>{part.part_name}</td>
-                                                    <td>₹{part.part_price.toFixed(2)}</td>
-                                                    <td>
-                                                        <button
-                                                            className="icon-btn"
-                                                            onClick={() => handleEditPart(part)}
-                                                        >
-                                                            <FaEdit />
-                                                        </button>
-                                                        <button
-                                                            className="icon-btn delete-btn"
-                                                            onClick={() => handleDeletePart(part._id)}
-                                                        >
-                                                            <FaTrash />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="3" style={{ textAlign: "center" }}>
-                                                    No saved parts found.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                          {/* ... (savedparts tab JSX unchanged) ... */}
+                          <h2>Saved Parts</h2>
+                          <hr />
+                          <form onSubmit={handleSavePart} className="settings-form saved-item-form">
+                              <label>{editingPartId ? "Edit Part" : "Add New Part"}</label>
+                              <div className="input-with-button">
+                                  <input
+                                      type="text"
+                                      placeholder="Enter part name"
+                                      value={partName}
+                                      onChange={(e) => setPartName(e.target.value)}
+                                      className="light-input"
+                                      style={{ flex: 2 }}
+                                  />
+                                  <input
+                                      type="number"
+                                      placeholder="Enter price"
+                                      value={partPrice}
+                                      onChange={(e) => setPartPrice(e.target.value)}
+                                      className="light-input"
+                                      style={{ flex: 1 }}
+                                  />
+                                  <button type="submit" className="add-btn">
+                                      {editingPartId ? <FaSave /> : <FaPlus />}
+                                      {editingPartId ? " Update" : " Save"}
+                                  </button>
+                                  {editingPartId && (
+                                      <button type="button" className="cancel-btn" onClick={clearPartForm}>
+                                          Cancel
+                                      </button>
+                                  )}
+                              </div>
+                          </form>
+                          <div className="customer-table-container" style={{ marginTop: '30px' }}>
+                              <h4>Existing Parts</h4>
+                              <table className="customer-table">
+                                  <thead>
+                                      <tr>
+                                          <th>Part Name</th>
+                                          <th>Part Price</th>
+                                          <th style={{ width: '100px' }}>Actions</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {savedParts.length > 0 ? (
+                                          savedParts.map((part) => (
+                                              <tr key={part._id}>
+                                                  <td>{part.part_name}</td>
+                                                  <td>₹{part.part_price.toFixed(2)}</td>
+                                                  <td>
+                                                      <button
+                                                          className="icon-btn"
+                                                          onClick={() => handleEditPart(part)}
+                                                      >
+                                                          <FaEdit />
+                                                      </button>
+                                                      <button
+                                                          className="icon-btn delete-btn"
+                                                          onClick={() => handleDeletePart(part._id)}
+                                                      >
+                                                          <FaTrash />
+                                                      </button>
+                                                  </td>
+                                              </tr>
+                                          ))
+                                      ) : (
+                                          <tr>
+                                              <td colSpan="3" style={{ textAlign: "center" }}>
+                                                  No saved parts found.
+                                              </td>
+                                          </tr>
+                                      )}
+                                  </tbody>
+                              </table>
+                          </div>
                         </>
                     )}
 
                     {activeTab === "jobcard" && (
                         <>
-                            {/* ... (jobcard tab JSX unchanged) ... */}
-                            <h2>Customise Jobcard fields</h2>
-                            <hr />
-                            <FieldConfig fields={fields} setFields={setFields} />
-                            <br />
-                            <button onClick={saveConfig} className="save-btn" style={{ alignSelf: 'flex-start' }}>
-                                Save Configuration
-                            </button>
+                          {/* ... (jobcard tab JSX unchanged) ... */}
+                          <h2>Customise Jobcard fields</h2>
+                          <hr />
+                          <FieldConfig fields={fields} setFields={setFields} />
+                          <br />
+                          <button onClick={saveConfig} className="save-btn" style={{ alignSelf: 'flex-start' }}>
+                              Save Configuration
+                          </button>
                         </>
                     )}
 
-                    {/* 🚀 NEW: Subscription Tab Content */}
                     {activeTab === "subscription" && (
                         <>
-                            <h2>Subscription Plans</h2>
-                            <hr />
-                            {/* Make sure to copy styles from subscriptionplans.css 
-                into settings.css for 'plans-container' and 'plan-card'
-              */}
-                            <div className="plans-container">
-                                {plans.map((plan) => (
-                                    <div key={plan.id} className="plan-card">
-                                        <h3>{plan.title}</h3>
-                                        <p className="plan-price">{plan.price}</p>
-                                        <p className="plan-duration">{plan.duration}</p>
-                                        {/* You can add a "Buy Now" or "Current Plan" button here */}
-                                    </div>
-                                ))}
-                            </div>
+                          {/* ... (subscription tab JSX unchanged) ... */}
+                          <h2>Subscription Plans</h2>
+                          <hr />
+                          <div className="plans-container">
+                            {plans.map((plan) => (
+                              <div key={plan.id} className="plan-card">
+                                <h3>{plan.title}</h3>
+                                <p className="plan-price">{plan.price}</p>
+                                <p className="plan-duration">{plan.duration}</p>
+                              </div>
+                            ))}
+                          </div>
                         </>
                     )}
 
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modal for WhatsApp */}
             {showModal && (
                 <div className="modal-overlay">
-                    {/* ... (modal JSX unchanged) ... */}
-                    <div className="modal-content modal-grid">
-                        <div className="modal-left">
-                            <h3>{editingMessageId ? "Edit Message" : "Create New Message"}</h3>
-                            <label>Message Name</label>
-                            <input
-                                type="text"
-                                value={messageName}
-                                onChange={(e) => setMessageName(e.target.value)}
-                                className="light-input"
-                            />
-                            <label>Message Content</label>
-                            <textarea
-                                ref={customTextRef}
-                                rows="7"
-                                value={customText.replace(/\\n/g, "\n")}
-                                onChange={(e) => setCustomText(e.target.value)}
-                                className="light-input"
-                                placeholder="Type your message or insert fields..."
-                            />
-                            <div className="preview-section">
-                                <h4>Message Preview</h4>
-                                <div className="preview-box">
-                                    <pre>{customText.replace(/\\n/g, "\n")}</pre>
-                                </div>
-                            </div>
-                            <div className="modal-actions">
-                                <button className="update-btn" onClick={handleSaveMessage}>
-                                    Save
-                                </button>
-                                <button className="cancel-btn" onClick={() => {
-                                    setShowModal(false);
-                                    setEditingMessageId(null);
-                                    setMessageName("");
-                                    setCustomText("");
-                                }}>
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                        <div className="modal-right">
-                            <h4>Available Fields</h4>
-                            {jobCardSchema ? (
-                                <div className="field-list">
-                                    {getRelevantFields(jobCardSchema).map((f) => (
-                                        <button
-                                            key={f.key}
-                                            className="field-btn"
-                                            onClick={() => insertField(f.key)}
-                                        >
-                                            {f.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p>Loading schema...</p>
-                            )}
+                  {/* ... (modal JSX unchanged) ... */}
+                  <div className="modal-content modal-grid">
+                      <div className="modal-left">
+                          <h3>{editingMessageId ? "Edit Message" : "Create New Message"}</h3>
+                          <label>Message Name</label>
+                          <input
+                              type="text"
+                              value={messageName}
+                              onChange={(e) => setMessageName(e.target.value)}
+                              className="light-input"
+                          />
+                          <label>Message Content</label>
+                          <textarea
+                              ref={customTextRef}
+                              rows="7"
+                              value={customText.replace(/\\n/g, "\n")}
+                              onChange={(e) => setCustomText(e.target.value)}
+                              className="light-input"
+                              placeholder="Type your message or insert fields..."
+                          />
+                          <div className="preview-section">
+                              <h4>Message Preview</h4>
+                              <div className="preview-box">
+                                  <pre>{customText.replace(/\\n/g, "\n")}</pre>
+                              </div>
+                          </div>
+                          <div className="modal-actions">
+                              <button className="update-btn" onClick={handleSaveMessage}>
+                                  Save
+                              </button>
+                              <button className="cancel-btn" onClick={() => {
+                                  setShowModal(false);
+                                  setEditingMessageId(null);
+                                  setMessageName("");
+                                  setCustomText("");
+                              }}>
+                                  Cancel
+                              </button>
+                          </div>
+                      </div>
+                      <div className="modal-right">
+                          <h4>Available Fields</h4>
+                          {jobCardSchema ? (
+                              <div className="field-list">
+                                  {getRelevantFields(jobCardSchema).map((f) => (
+                                      <button
+                                          key={f.key}
+                                          className="field-btn"
+                                          onClick={() => insertField(f.key)}
+                                      >
+                                          {f.name}
+                                      </button>
+                                  ))}
+                              </div>
+                          ) : (
+                              <p>Loading schema...</p>
+                          )}
+                      </div>
+                  </div>
+                </div>
+            )}
+
+            {/* 🚀 NEW: Warning Modal for Job Card Config */}
+            {showConfigWarning && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '600px' }}>
+                        <h2 style={{ marginTop: 0, color: '#d9534f' }}>⚠️ Important: Read Before Editing Schema</h2>
+                        <p>You are about to make changes to your core job card structure. Please read these points carefully:</p>
+                        <ul style={{ paddingLeft: '20px', lineHeight: '1.6' }}>
+                            <li>
+                                <b>Mandatory Fields:</b> Core fields (like 'Job Number', 'Customer Name') are locked. They cannot be renamed or deleted to ensure your app continues to work correctly.
+                            </li>
+                            <li style={{ marginTop: '10px' }}>
+                                <b>Adding New Fields:</b> When you add a new field, all your **existing** job cards will not have this field. It will appear as empty or 'null' until you manually edit and save those old job cards.
+                            </li>
+                            <li style={{ marginTop: '10px' }}>
+                                <b>Deleting Fields:</b> When you delete a non-mandatory field, the data for that field will be **hidden** from *all* existing and new job cards.
+                            </li>
+                            <li style={{ marginTop: '10px' }}>
+                                <b>Recommendation:</b> It is highly recommended to finalize your schema and **make changes infrequently**. Changing your structure often can lead to data inconsistencies.
+                            </li>
+                        </ul>
+                        <div className="modal-actions" style={{ justifyContent: 'flex-end', marginTop: '20px' }}>
+                            <button className="update-btn" onClick={() => setShowConfigWarning(false)}>
+                                I Understand, Continue
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
+
         </div>
     );
 };

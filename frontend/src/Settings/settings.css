@@ -1,24 +1,60 @@
-.settings-container {
+/* --- Base Settings & Layout --- */
+
+.settings-layout {
   display: flex;
-  justify-content: center;
-  padding: 20px;
-  background: #f9f9f9; /* light background for page */
-  min-height: 100vh;
-  min-width: 100vw;
+  width: 100vw; /* Full viewport width */
+  /* Height is calc(100vh - navbar_height). 
+     Assuming navbar is 50px. Adjust if needed. */
+  height: calc(100vh - 50px); 
+  background: #f9f9f9;
+  overflow: hidden; /* Prevent overall layout scroll */
 }
 
-.settings-content {
-  width: 100%;
-  max-width: 500px;
-  background: #fff;
+.settings-sidebar {
+  width: 250px;
+  background: #ffffff;
+  border-right: 1px solid #ddd;
   padding: 20px;
-  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
+  overflow-y: auto; /* Allow sidebar to scroll if many tabs */
+}
+
+/* This was the fix for horizontal overflow */
+.settings-right {
+  flex: 1;
+  padding: 40px 60px; /* more spacious feel */
+  overflow-y: auto; /* ONLY vertical scroll */
+  overflow-x: hidden; /* No horizontal scroll */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  /* align-items: flex-start; <-- REMOVED this line to fix overflow */
+  min-width: 0;
+  background: #f9f9f9; /* consistent with page */
+}
+
+.tab-btn {
+  padding: 12px 15px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
   color: #333;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
 
-.settings-section {
-  margin-bottom: 20px;
+.tab-btn:hover {
+  background: #f1f1f1;
+}
+
+.tab-btn.active {
+  background: #007bff;
+  color: white;
 }
 
 .settings-form {
@@ -26,11 +62,14 @@
   flex-direction: column;
   gap: 12px;
   margin-top: 15px;
+  width: 100%; /* Ensure forms don't overflow */
+  max-width: 600px; /* Set a max-width for forms */
 }
 
 .settings-form label {
   font-weight: bold;
   color: #444;
+  margin-bottom: -5px;
 }
 
 .light-input {
@@ -40,6 +79,7 @@
   background: #fff;
   color: #000;
   width: 100%;
+  box-sizing: border-box; /* Important for padding */
 }
 
 .input-with-icon {
@@ -57,6 +97,7 @@
   padding: 8px;
   border-radius: 6px;
   transition: background 0.2s;
+  height: 40px; /* Match input height */
 }
 
 .edit-btn:hover {
@@ -64,7 +105,7 @@
 }
 
 .update-btn {
-  padding: 10px;
+  padding: 10px 15px;
   border: none;
   border-radius: 6px;
   background: #4caf50;
@@ -72,6 +113,7 @@
   font-weight: bold;
   cursor: pointer;
   transition: 0.2s;
+  align-self: flex-start; /* Stop button from stretching */
 }
 
 .update-btn:disabled {
@@ -79,124 +121,68 @@
   cursor: not-allowed;
 }
 
-.whatsapp-scroll {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  padding: 1rem 0;
-  scroll-behavior: smooth;
-}
-
-.message-card {
-  min-width: 220px;
-  background: #f9f9f9;
-  border: 1px solid #ddd;
-  border-radius: 16px;
-  padding: 1rem;
-  text-align: center;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-  flex-shrink: 0;
-  transition: 0.2s;
-}
-
-.message-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
-}
-
-.create-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #007bff;
-  font-weight: bold;
-}
-
-.msg-preview {
-  font-size: 0.85rem;
-  color: #555;
-  margin: 0.5rem 0;
-  word-wrap: break-word;
-}
-
-.msg-actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #333;
-  font-size: 1rem;
-}
-
-.delete-btn {
-  color: #e74c3c;
-}
+/* --- Modal CSS (FIXED) --- */
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.5); /* Darker backdrop */
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
   height: 100%;
+  z-index: 1000; /* Ensure it's on top */
 }
 
 .modal-content {
   background: white;
   padding: 2rem;
   border-radius: 12px;
-  width: 400px;
-  max-width: 90%;
+  width: auto; /* <-- CHANGED */
+  max-width: 600px; /* <-- CHANGED */
   max-height: 90vh;
   display: flex;
-  flex-direction: row;
+  flex-direction: column; /* <-- CHANGED (This is the main fix) */
+  overflow-y: auto; /* Handles tall modal content */
+  box-sizing: border-box;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.modal-grid {
+  flex-direction: row; /* <-- ADDED (Overrides 'column' for this specific modal) */
+  max-width: 900px; /* <-- CHANGED */
+  width: 90%; /* <-- ADDED */
+  gap: 20px;
 }
 
 .modal-actions {
   display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
+  justify-content: flex-end; /* <-- CHANGED (Aligns buttons right) */
+  gap: 10px; /* <-- ADDED */
+  margin-top: 1.5rem;
+  width: 100%;
 }
 
 .cancel-btn {
-  background: #ccc;
+  background: #888;
+  color: white;
   border: none;
   border-radius: 6px;
-  padding: 0.5rem 1rem;
+  padding: 10px 15px; /* Match update-btn */
+  font-weight: bold;
   cursor: pointer;
+  transition: 0.2s;
 }
-
-.base-message {
-  background: #f2f2f2;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 0.75rem;
-  white-space: pre-wrap;
-  font-size: 0.9rem;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.modal-grid {
-  display: flex;
-  gap: 20px;
-  width: 90%;
-  max-width: 900px;
+.cancel-btn:hover {
+  background: #666;
 }
 
 .modal-left,
 .modal-right {
   flex: 1;
   overflow-y: auto;
+  min-width: 0; /* Prevents flex overflow */
 }
 
 .modal-left::-webkit-scrollbar,
@@ -209,17 +195,7 @@
   border-radius: 3px;
 }
 
-.schema-display {
-  background: #f7f7f7;
-  border: 1px solid #ccc;
-  padding: 10px;
-  border-radius: 8px;
-  font-family: monospace;
-  font-size: 0.85rem;
-  max-height: 400px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-}
+/* --- Modal Content Styles (WhatsApp, Warning) --- */
 
 .field-list {
   display: flex;
@@ -243,85 +219,153 @@
   background: #cfe7ff;
 }
 
-/* --- Two Pane Layout --- */
-.settings-layout {
-  display: flex;
-  width: 100vw; /* Full viewport width */
-  height: 100vh; /* Full viewport height */
-  background: #f9f9f9;
-  overflow: hidden; /* Prevent overall layout scroll */
+.preview-section {
+  margin-top: 15px;
 }
 
-.settings-sidebar {
-  width: 250px;
-  background: #ffffff;
-  border-right: 1px solid #ddd;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex-shrink: 0; /* Prevent sidebar from shrinking */
-}
-
-.settings-right {
-  flex: 1;
-  padding: 40px 60px; /* more spacious feel */
-  overflow-x: auto;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  min-width: 0;
-  background: #f9f9f9; /* consistent with page */
-}
-
-
-.tab-btn {
-  padding: 12px 15px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
+.preview-section h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
   color: #333;
-  font-weight: 500;
-  text-align: left;
+}
+
+.preview-box {
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px 15px;
+  min-height: 100px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.preview-box pre {
+  margin: 0;
+  white-space: pre-wrap; /* Allows text to wrap */
+  word-wrap: break-word;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.modal-content ul {
+  padding-left: 20px;
+  line-height: 1.6;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.modal-content li {
+  margin-bottom: 12px;
+}
+
+.modal-content li b {
+  color: #c9302c; /* A warning red for bolded text */
+}
+
+
+/* --- WhatsApp Tab --- */
+
+.whatsapp-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 1rem 0;
+  scroll-behavior: smooth;
+  width: 100%;
+}
+
+.message-card {
+  min-width: 220px;
+  max-width: 220px;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+  transition: 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.message-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+
+.create-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
+  color: #007bff;
+  font-weight: bold;
 }
 
-.tab-btn:hover {
-  background: #f1f1f1;
+.msg-preview {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0.5rem 0;
+  word-wrap: break-word;
+  flex-grow: 1;
 }
 
-.tab-btn.active {
-  background: #007bff;
-  color: white;
+.msg-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 10px;
 }
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #333;
+  font-size: 1rem;
+  padding: 5px;
+}
+
+.delete-btn {
+  color: #e74c3c;
+}
+.icon-btn.delete-btn svg {
+  color: #e53935;
+}
+
+
+/* --- Customer, Saved Items, Saved Parts Tabs --- */
 
 .customer-table-container {
   width: 100%;
-  max-height: 60vh; /* Adjust height as needed */
-  overflow-y: auto;   /* Adds a scrollbar if the content overflows */
+  max-height: 60vh;
+  overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   margin-top: 20px;
+  background: #fff; /* Add white background */
 }
 
 .customer-table {
   width: 100%;
-  border-collapse: collapse; /* Removes double borders */
+  border-collapse: collapse;
 }
 
 .customer-table th,
 .customer-table td {
   padding: 12px 15px;
   text-align: left;
-  border-bottom: 1px solid #e0e0e0; /* Light border for rows */
+  border-bottom: 1px solid #e0e0e0;
 }
 
-/* Table Header */
 .customer-table th {
-  background-color: #f9f9f9; /* Very light grey header */
+  background-color: #f9f9f9;
   font-weight: 600;
   font-size: 0.9em;
   color: #555;
@@ -329,9 +373,8 @@
   letter-spacing: 0.5px;
 }
 
-/* Table Body */
 .customer-table tbody tr:hover {
-  background-color: #f5f5f5; /* Hover effect for rows */
+  background-color: #f5f5f5;
 }
 
 .customer-table td {
@@ -339,7 +382,6 @@
   vertical-align: middle;
 }
 
-/* "No customers found" message */
 .customer-table td[colSpan="3"] {
   text-align: center;
   color: #888;
@@ -347,18 +389,11 @@
   padding: 20px;
 }
 
-/* You already have .icon-btn and .delete-btn styles.
-  This ensures they work well inside the table.
-*/
 .customer-table .icon-btn {
   background: transparent;
-  border: none;
-  cursor: pointer;
   padding: 5px;
   border-radius: 5px;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   transition: background-color 0.2s ease;
 }
 
@@ -368,39 +403,35 @@
 }
 
 .customer-table .delete-btn:hover {
-  background-color: #ffebee; /* Light red background on hover */
+  background-color: #ffebee;
 }
 
 .customer-table .delete-btn:hover svg {
-  color: #d32f2f; /* Red icon color on hover */
-}
-
-/* This is probably already in your settings.css, but just in case */
-.icon-btn.delete-btn svg {
-  color: #e53935;
+  color: #d32f2f;
 }
 
 .settings-form.saved-item-form {
   margin-bottom: 25px;
+  max-width: 100%; /* Allow this form to be wider */
 }
 
-/* Styles for the input + button container */
 .input-with-button {
   display: flex;
+  flex-wrap: wrap; /* Allow wrapping on small screens */
   gap: 10px;
 }
 
 .input-with-button .light-input {
-  flex-grow: 1; /* Makes input take available space */
+  flex-grow: 1;
   margin: 0;
+  min-width: 200px; /* Prevent input from getting too small */
 }
 
-/* Style for the new 'Add' button */
 .add-btn {
-  background-color: #007bff; /* Example: Blue */
+  background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px; /* Match inputs */
   padding: 10px 15px;
   font-weight: 600;
   cursor: pointer;
@@ -408,19 +439,22 @@
   align-items: center;
   gap: 5px;
   transition: background-color 0.2s ease;
+  height: 40px; /* Match input height */
 }
 
 .add-btn:hover {
-  background-color: #0056b3; /* Darker blue */
+  background-color: #0056b3;
 }
 
-/* Container for the list */
 .saved-items-list-container {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 15px;
-  max-height: 40vh; /* Scrollable list */
+  max-height: 40vh;
   overflow-y: auto;
+  width: 100%;
+  max-width: 600px; /* Match form width */
+  background: #fff; /* Add white background */
 }
 
 .saved-items-list-container h4 {
@@ -431,7 +465,6 @@
   padding-bottom: 8px;
 }
 
-/* List styling */
 .saved-items-list {
   list-style: none;
   padding: 0;
@@ -453,28 +486,15 @@
 .saved-items-list li span {
   font-size: 1rem;
   color: #555;
+  word-break: break-all;
 }
 
-/* jobcardconfig.css */
+/* --- Job Card Config Tab --- */
+/* These styles are from your jobcardconfig.css */
 
-.jobcard-container {
-  max-width: 1100px;
-  min-width: 100vw;
-  margin: 40px auto;
-  padding: 25px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  font-family: "Segoe UI", sans-serif;
-  color: #333;
-}
-
-.title {
-  font-size: 1.8rem;
-  font-weight: 600;
-  margin-bottom: 25px;
-  text-align: center;
-  color: #2c3e50;
+.field-group {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .field-item {
@@ -484,6 +504,8 @@
   border-radius: 12px;
   border: 1px solid #e6ebf5;
   transition: background 0.3s ease, border-color 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .field-item:hover {
@@ -509,6 +531,12 @@
   transition: border 0.2s, background 0.2s;
   background: #ffffff;
   color: #34495e;
+  box-sizing: border-box;
+}
+
+.field-input {
+  flex-grow: 1;
+  min-width: 200px;
 }
 
 .field-input:focus,
@@ -526,45 +554,73 @@
   cursor: not-allowed;
 }
 
-button {
-  cursor: pointer;
+.field-key {
+  font-size: 0.85rem;
+  color: #777;
+  font-family: monospace;
+}
+
+.add-field-btn,
+.add-option-btn,
+.remove-btn,
+.move-btn,
+.remove-option-btn,
+.save-btn {
   border: none;
   border-radius: 8px;
   padding: 8px 14px;
   font-size: 0.9rem;
+  font-weight: 500;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .add-field-btn,
 .add-option-btn {
-  background: #6c63ff;
-  color: white;
+  background: #e8f3ff;
+  color: #0056b3;
   margin-top: 8px;
 }
 
 .add-field-btn:hover,
 .add-option-btn:hover {
-  background: #5a52e6;
+  background: #cfe7ff;
 }
 
 .remove-btn,
 .remove-option-btn {
-  background: #ff7b7b;
-  color: white;
+  background: #ffebee;
+  color: #d32f2f;
 }
 
 .remove-btn:hover,
 .remove-option-btn:hover {
-  background: #e06666;
+  background: #ffcdd2;
 }
 
 .move-btn {
-  background: #e1e8ff;
+  background: #f1f1f1;
   color: #333;
 }
 
 .move-btn:hover {
-  background: #c9d6ff;
+  background: #e0e0e0;
+}
+
+.move-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.save-btn {
+  background: #4caf50;
+  color: white;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+}
+.save-btn:hover {
+  background: #45a049;
 }
 
 .options-section {
@@ -577,7 +633,8 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 6px 0;
+  margin: 8px 0;
+  flex-wrap: wrap;
 }
 
 .subfields-section {
@@ -591,6 +648,7 @@ button {
 .subfields-title {
   font-size: 1rem;
   font-weight: 500;
+  margin-top: 0;
   margin-bottom: 10px;
   color: #34495e;
 }
@@ -605,9 +663,79 @@ button {
 
 .color-picker-label input[type="color"] {
   margin-left: 6px;
-  border: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   width: 30px;
-  height: 25px;
+  height: 30px;
   cursor: pointer;
   padding: 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #333;
+  margin-left: 10px;
+  cursor: pointer;
+}
+.checkbox-label input {
+  margin-right: 6px;
+  cursor: pointer;
+}
+
+.status-hint {
+  font-size: 0.85rem;
+  color: #555;
+  background-color: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+/* --- Subscription Plans Tab --- */
+
+.plans-container {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+  gap: 20px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.plan-card {
+  flex: 1; /* Allows cards to grow */
+  min-width: 250px; /* Each card must be at least 250px */
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 25px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.plan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.plan-card h3 {
+  margin-top: 0;
+  font-size: 1.4rem;
+  color: #007bff;
+}
+
+.plan-price {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 10px 0;
+}
+
+.plan-duration {
+  font-size: 1rem;
+  color: #777;
+  margin-top: -10px;
 }
