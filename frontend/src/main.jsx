@@ -8,7 +8,6 @@ import SignIn from './SignIn/SignIn.jsx';
 import Dashboard from './Dashboard/Dashboard.jsx';
 import CreateJobCard from './CreateJobCard/CreateJobCard.jsx';
 import JobCardDetails from './JobCardDetails/JobCardDetails.jsx';
-import SubscriptionPlans from './SubsciptionPlans/SubscriptionPlans.jsx';
 import Settings from './Settings/Settings.jsx';
 
 createRoot(document.getElementById('root')).render(
@@ -19,7 +18,6 @@ createRoot(document.getElementById('root')).render(
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/create-job" element={<CreateJobCard />} />
         <Route path="/jobs/:id" element={<JobCardDetails />} />
-        <Route path="/plans" element={<SubscriptionPlans />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </Router>

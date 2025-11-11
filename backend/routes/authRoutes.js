@@ -70,11 +70,12 @@ router.post('/signin', async (req, res) => {
     }
 
     let isPlanExpired = false;
+    let validityDate = new Date();
 
     if (!user.validity) {
       console.warn(`User ${user.email} has no 'validityEndDate'. Treating as active.`);
     } else {
-      const validityDate = new Date(user.validity);
+      validityDate = new Date(user.validity);
 
       validityDate.setHours(23, 59, 59, 999);
 
@@ -100,7 +101,8 @@ router.post('/signin', async (req, res) => {
       token,
       user: { name: user.name, email: user.email },
       schemaConfigured: user.schemaConfigured,
-      isPlanExpired: isPlanExpired
+      isPlanExpired: isPlanExpired,
+      planValidity: validityDate
     });
 
   } catch (err) {

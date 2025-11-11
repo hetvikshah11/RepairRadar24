@@ -93,6 +93,7 @@ export default function SignIn() {
                     sessionStorage.setItem("token", resp.data.token);
                     sessionStorage.setItem("userName", resp.data.user.name);
                     sessionStorage.setItem("isPlanExpired", resp.data.isPlanExpired);
+                    sessionStorage.setItem("planValidity", resp.data.planValidity);
 
                     const token = resp.data.token;
 
