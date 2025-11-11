@@ -2,9 +2,6 @@
 
 .settings-layout {
   display: flex;
-  width: 100vw; /* Full viewport width */
-  /* Height is calc(100vh - navbar_height). 
-     Assuming navbar is 50px. Adjust if needed. */
   height: calc(100vh - 50px); 
   background: #f9f9f9;
   overflow: hidden; /* Prevent overall layout scroll */

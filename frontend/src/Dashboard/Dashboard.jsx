@@ -1,13 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../axiosConfig";
-import { Button } from "@mui/material";
+import { Button, TextField, InputAdornment } from "@mui/material"; // Added InputAdornment
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import Navbar from "../Navbar/Navbar"; // Import Navbar
+import SearchIcon from "@mui/icons-material/Search"; // Added SearchIcon
+import Navbar from "../Navbar/Navbar";
 import "./dashboard.css";
+
+// Helper function to recursively search for a word in an object
+const deepSearch = (obj, word) => {
+  for (const key in obj) {
+    const value = obj[key];
+    if (value === null || value === undefined) continue;
+
+    // If it's an object or array, recurse
+    if (typeof value === "object") {
+      if (deepSearch(value, word)) return true;
+    }
+    // If it's a primitive, check it
+    else {
+      if (String(value).toLowerCase().includes(word)) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [totalJobs, setTotalJobs] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -42,22 +64,20 @@ export default function Dashboard() {
         const status = err.response?.status;
         console.error("Error fetching initial data:", err);
 
-        // Retry once if 401
         if (status === 401 && !isRetry) {
           console.warn("Got 401, retrying after 0.5s...");
           setTimeout(() => fetchInitialData(true), 500);
         } else if (!isRetry) {
-          // Retry once for transient errors
           console.warn("Retrying fetch after 0.5s due to error...");
           setTimeout(() => fetchInitialData(true), 500);
         } else {
-          // After retry failed, navigate home
           navigate("/");
         }
       }
     };
 
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, token]);
 
   const fetchJobs = async (pageNum) => {
@@ -86,32 +106,63 @@ export default function Dashboard() {
     }
   };
 
+  const filteredJobs = useMemo(() => {
+    if (!searchTerm) {
+      return jobs; // No filter, return all fetched jobs
+    }
+
+    // Split search term into individual words, make lowercase
+    const searchWords = searchTerm
+      .toLowerCase()
+      .split(" ")
+      .filter((word) => word.length > 0);
+
+    return jobs.filter((job) => {
+      // Return true if *any* search word matches *any* field
+      return searchWords.some((word) => deepSearch(job, word));
+    });
+  }, [searchTerm, jobs]); // Re-filter when search or jobs change
+
   return (
     <div className="dashboard-container">
-      {/* Navbar */}
       <Navbar />
 
-      {/* Job Summary + Create Button */}
       <div className="job-summary-section">
         <p className="job-summary">
           Total Jobs: <b>{totalJobs}</b>
         </p>
+
+        <TextField
+          label="Search Job Cards (e.g., Customer, Item, Job No)"
+          variant="outlined"
+          size="small"
+          className="dashboard-search"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddCircleOutlineIcon />}
           className="create-job-btn"
           onClick={() => navigate("/create-job")}
-          disabled = {isPlanExpired}
+          disabled={isPlanExpired}
         >
           Create Job Card
         </Button>
       </div>
 
-      {/* Job Cards */}
       <div className="job-cards">
-        {jobs.length > 0 ? (
-          jobs.map((job) => (
+        {filteredJobs.length > 0 ? (
+          filteredJobs.map((job) => (
             <div key={job._id} className="job-card">
               <h3>Job #{job.job_no || "-"}</h3>
               <p>
@@ -155,13 +206,16 @@ export default function Dashboard() {
             </div>
           ))
         ) : (
-          <p className="no-jobs">No jobs found.</p>
+          <p className="no-jobs">
+            {jobs.length === 0 && !loading
+              ? "No jobs found."
+              : "No jobs match your search."}
+          </p>
         )}
       </div>
 
-      {/* Pagination */}
       <div className="pagination">
-        {hasMore && !loading && (
+        {hasMore && !loading && !searchTerm && (
           <button onClick={() => fetchJobs(page + 1)} className="load-more-btn">
             Load More
           </button>

@@ -1,194 +1,163 @@
-/* === General Page Layout === */
+/* --- Main Layout --- */
 .dashboard-container {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: #f9f9fb;
+  width: 100%;
   min-height: 100vh;
-  min-width: 100vw;
-  padding: 20px;
-  box-sizing: border-box;
+  background-color: #f4f7f6;
+  padding-bottom: 40px; /* Space for "Load More" button */
 }
 
-/* === Navbar (Updated for Center Name) === */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #1976d2;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  position: relative;
-}
-
-.nav-section {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Center username perfectly */
-.nav-section.center {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.user-name {
-  font-size: 1.2rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: white;
-}
-
-.nav-btn {
-  background: white;
-  color: #1976d2;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.nav-btn:hover {
-  background: #f0f0f0;
-  transform: translateY(-1px);
-}
-
-/* === Job Summary Section === */
+/* --- Top Summary Bar --- */
 .job-summary-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  background: white;
-  padding: 12px 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  margin-bottom: 20px;
+  padding: 15px 25px;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+  gap: 15px;
 }
 
 .job-summary {
-  font-size: 15px;
+  font-size: 1.1rem;
   color: #333;
   margin: 0;
+  white-space: nowrap;
 }
 
-.create-job-btn {
-  border-radius: 6px;
-  text-transform: none;
-  font-weight: 500;
-}
-
-/* === Job Cards Grid === */
-.job-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-.job-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.job-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.job-card h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #1976d2;
-}
-
-.job-card p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #555;
-}
-
-/* === Items Table === */
-.items-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 12px 0;
-  font-size: 14px;
-}
-
-.items-table th,
-.items-table td {
-  border: 1px solid #ddd;
-  padding: 6px 8px;
-  text-align: left;
-}
-
-.items-table th {
-  background: #f2f6fc;
-  color: #1976d2;
+.job-summary b {
+  color: #007bff;
   font-weight: 600;
 }
 
-.items-table td {
-  color: #333;
+/* --- Search Bar --- */
+.dashboard-search {
+  flex-grow: 1; /* This makes it take up available space */
+  min-width: 300px; /* Ensures it's not too small */
+  max-width: 600px; /* Prevents it from being overly wide */
+  margin: 0 20px !important; /* Spacing */
 }
 
-/* === View Button === */
+/* --- Create Job Button --- */
+.create-job-btn {
+  /* You can customize the Mui button here if needed */
+  flex-shrink: 0; /* Prevents button from shrinking */
+}
+
+/* --- Job Card Grid --- */
+.job-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Changed from 300px */
+  gap: 20px;
+  padding: 25px;
+}
+
+.job-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.job-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.job-card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 10px;
+}
+
+.job-card p {
+  margin: 0 0 10px 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+.job-card p b {
+  color: #111;
+  font-weight: 600;
+}
+
+/* --- Items Table inside Card --- */
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  flex-grow: 1; /* Pushes button to the bottom */
+}
+
+.items-table th {
+  background: #f9f9f9;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  color: #444;
+  border-bottom: 1px solid #eee;
+}
+
+.items-table td {
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f5f5f5;
+}
+.items-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- View Details Button --- */
 .view-btn {
-  margin-top: auto;
-  background: #1976d2;
+  background-color: #007bff;
   color: white;
   border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.2s, transform 0.1s;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+  margin-top: auto; /* Pushes button to bottom */
 }
 
 .view-btn:hover {
-  background: #145ca8;
-  transform: translateY(-1px);
+  background-color: #0056b3;
 }
 
-/* === Pagination === */
+/* --- Pagination & Loading --- */
 .pagination {
-  margin-top: 25px;
   text-align: center;
+  padding: 20px;
 }
 
 .load-more-btn {
-  background: #1976d2;
+  background-color: #555;
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 8px;
+  padding: 12px 25px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.2s, transform 0.1s;
+  transition: background-color 0.2s ease;
 }
 
 .load-more-btn:hover {
-  background: #145ca8;
-  transform: translateY(-1px);
+  background-color: #333;
 }
 
 .no-jobs {
+  width: 100%;
   text-align: center;
-  color: #888;
-  margin-top: 20px;
-  font-size: 15px;
+  font-size: 1.1rem;
+  color: #777;
+  padding: 40px 0;
+  grid-column: 1 / -1; /* Makes it span all columns */
 }
