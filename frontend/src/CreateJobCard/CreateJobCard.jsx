@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -15,10 +15,31 @@ import {
   Modal,
   Box,
   Typography,
+  Grid,
 } from "@mui/material";
 import { AddCircle, Delete } from "@mui/icons-material";
-import api from "../axiosConfig";
+import api from "../axiosConfig.js";
+import Navbar from "../Navbar/Navbar.jsx";
 import "./createjobcard.css";
+
+// Helper function to recursively search for a word in an object
+const deepSearch = (obj, word) => {
+  for (const key in obj) {
+    const value = obj[key];
+    if (value === null || value === undefined) continue;
+
+    if (typeof value === 'object') {
+      if (deepSearch(value, word)) return true;
+    } 
+    else {
+      if (String(value).toLowerCase().includes(word)) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 
 export default function CreateJobCard() {
   const navigate = useNavigate();
@@ -35,7 +56,6 @@ export default function CreateJobCard() {
   const [savedParts, setSavedParts] = useState([]);
   const [isPlanExpired, setIsPlanExpired] = useState(false);
 
-  // ✅ Fetch schema
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     if (!token) {
@@ -51,7 +71,6 @@ export default function CreateJobCard() {
     })
       .then((res) => {
         if (res.data && res.data.schema) {
-          // console.log("Fetched schema:", res.data.schema);
           setSchema(res.data.schema);
 
           const defaults = {};
@@ -75,7 +94,6 @@ export default function CreateJobCard() {
           navigate("/");
           return;
         }
-        // console.error("Schema fetch failed", err);
         alert("Could not load schema.");
       })
       .finally(() => setLoading(false));
@@ -165,6 +183,8 @@ export default function CreateJobCard() {
             fullWidth
             margin="normal"
             size="small"
+            InputLabelProps={field.type === "date" ? { shrink: true } : {}}
+            disabled={isPlanExpired}
           />
         );
 
@@ -182,6 +202,7 @@ export default function CreateJobCard() {
             onChange={(_, newVal) =>
               onChange(newVal ? newVal.value : field.options[0]?.value || "")
             }
+            disabled={isPlanExpired}
             renderInput={(params) => (
               <TextField {...params} label={field.name} margin="normal" fullWidth size="small" />
             )}
@@ -192,7 +213,7 @@ export default function CreateJobCard() {
         return (
           <div className="switch-row">
             <span>{field.name}</span>
-            <Switch checked={!!value} onChange={(e) => onChange(e.target.checked)} />
+            <Switch checked={!!value} onChange={(e) => onChange(e.target.checked)} disabled={isPlanExpired} />
           </div>
         );
 
@@ -209,7 +230,6 @@ export default function CreateJobCard() {
     setFormData((prev) => {
       let updated = { ...prev, customer_name: value || "" };
 
-      // Only update phone if found and current phone is empty
       if (found && !prev.customer_phone) {
         updated.customer_phone = found.customer_phone;
       }
@@ -224,7 +244,6 @@ export default function CreateJobCard() {
     setFormData((prev) => {
       let updated = { ...prev, customer_phone: phone };
 
-      // If phone length is 10 and name is currently empty, try to autofill name
       if (phone.length === 10 && !prev.customer_name) {
         const found = customerDetails.find((c) => c.customer_phone === phone);
         if (found) {
@@ -237,19 +256,16 @@ export default function CreateJobCard() {
   };
 
 
-  // ✅ Save job with validations
   const handleSave = async () => {
     setErrors({});
     const newErrors = {};
     const alertMessages = [];
 
-    // 🔹 Customer name validation
     if (!formData.customer_name || formData.customer_name.trim() === "") {
       newErrors.customer_name = "Customer name is required";
       alertMessages.push("Customer name is required");
     }
 
-    // 🔹 Customer phone validation
     if (!formData.customer_phone || formData.customer_phone.trim() === "") {
       newErrors.customer_phone = "Customer phone is required";
       alertMessages.push("Customer phone is required");
@@ -258,7 +274,6 @@ export default function CreateJobCard() {
       alertMessages.push("Phone number must be exactly 10 digits");
     }
 
-    // 🔹 Items validation
     const items = formData.items || [];
     if (items.length === 0) {
       newErrors.items = "At least 1 item is required";
@@ -307,7 +322,6 @@ export default function CreateJobCard() {
     }
   };
 
-  // ✅ Parts Modal validation before closing
   const handlePartsDone = () => {
     const { parentKey, rowIndex } = activeParts;
     const updated = [...formData[parentKey]];
@@ -330,7 +344,7 @@ export default function CreateJobCard() {
 
     if (hasError) {
       setPartsErrors("Part name cannot be empty");
-      return; // don’t close modal if invalid
+      return;
     }
 
     setFormData((prev) => ({
@@ -342,330 +356,358 @@ export default function CreateJobCard() {
     setActiveParts(null);
   };
 
+  const statusField = schema.find((f) => f.key === "jobcard_status");
+
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
-    <div className="page-container">
-      <h2 className="title">Create New Job</h2>
+    <>
+      <Navbar />
+      <div className="create-job-container">
+        <Typography variant="h5" component="h1" className="page-title">
+          Create New Job Card
+        </Typography>
 
-      {/* Job Details */}
-      <div className="job-details-grid">
-
-        <div key="customer_phone" className="field-item">
-          <TextField
-            label="Customer Phone"
-            value={formData.customer_phone || ""}
-            onChange={handleCustomerPhoneChange}
-            fullWidth
-            margin="normal"
-            size="small"
-            error={!!errors.customer_phone}
-            helperText={errors.customer_phone}
-            inputProps={{ maxLength: 10 }}
-          />
-        </div>
-
-        <div key="customer_name" className="field-item">
-          <Autocomplete
-            freeSolo
-            options={customerDetails.map((c) => c.customer_name)}
-            value={formData.customer_name || ""}
-            onInputChange={handleCustomerNameChange}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Customer Name"
-                margin="normal"
-                fullWidth
-                size="small"
-                error={!!errors.customer_name}
-                helperText={errors.customer_name}
-              />
-            )}
-          />
-        </div>
-
-        {schema
-          .filter(
-            (field) =>
-              field.type !== "list" &&
-              field.key !== "customer_name" &&
-              field.key !== "customer_phone" &&
-              field.key !== "job_no"
-          )
-          .map((field) => (
-            <div key={field.key} className="field-item">
-              {renderSimpleField(field, formData[field.key], (val) =>
-                handleChange(field.key, val)
-              )}
-              {errors[field.key] && <span className="error-text">{errors[field.key]}</span>}
+        {isPlanExpired && (
+            <div className="plan-status status-expired" style={{marginBottom: '20px'}}>
+              <span style={{ fontSize: '1.5rem', marginRight: '15px' }}>⚠️</span>
+              <div>
+                <strong>Your plan has expired.</strong> You cannot create new job cards.
+                <br />
+                Please go to <strong>Settings &gt; Subscription Plans</strong> to renew.
+              </div>
             </div>
-          ))}
-      </div>
+          )}
 
-      {/* Items List */}
-      {schema
-        .filter((field) => field.type === "list")
-        .map((field) => (
-          <div key={field.key} className="list-wrapper">
-            <h4>{field.name}</h4>
-            {errors.items && <span className="error-text">{errors.items}</span>}
-            <Paper className="list-table">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    {field.fields
-                      .filter((f) => f.type !== "list")
-                      .map((sub) => (
-                        <TableCell key={sub.key}>{sub.name}</TableCell>
-                      ))}
-                    <TableCell>Repair Cost</TableCell>
-                    <TableCell>Parts</TableCell>
-                    <TableCell>Action</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {(formData[field.key] || []).map((row, rowIndex) => {
-                    const statusField = field.fields.find((f) => f.key === "item_status");
-                    let rowColor = "";
-                    if (statusField && row.item_status) {
-                      const selectedOpt = statusField.options.find(
-                        (opt) => opt.value === row.item_status
-                      );
-                      if (selectedOpt?.color) {
-                        rowColor = selectedOpt.color;
-                      }
-                    }
+        {/* --- Key Details Section (Phone, Name, Status) --- */}
+        <Paper component="form" className="form-section">
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Customer Phone"
+                value={formData.customer_phone || ""}
+                onChange={handleCustomerPhoneChange}
+                fullWidth
+                margin="normal"
+                size="small"
+                error={!!errors.customer_phone}
+                helperText={errors.customer_phone}
+                inputProps={{ maxLength: 10 }}
+                disabled={isPlanExpired}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Autocomplete
+                freeSolo
+                options={customerDetails.map((c) => c.customer_name)}
+                value={formData.customer_name || ""}
+                onInputChange={handleCustomerNameChange}
+                disabled={isPlanExpired}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Customer Name"
+                    margin="normal"
+                    fullWidth
+                    size="small"
+                    error={!!errors.customer_name}
+                    helperText={errors.customer_name}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              {statusField && renderSimpleField(statusField, formData[statusField.key], (val) =>
+                  handleChange(statusField.key, val)
+                )}
+            </Grid>
+          </Grid>
+          <Grid container spacing={2}>
+            {schema
+              .filter(
+                (field) =>
+                  field.type !== "list" &&
+                  field.key !== "customer_name" &&
+                  field.key !== "customer_phone" &&
+                  field.key !== "job_no" &&
+                  field.key !== "jobcard_status"
+              )
+              .map((field) => (
+                <Grid item xs={12} sm={6} md={4} key={field.key}>
+                  {renderSimpleField(field, formData[field.key], (val) =>
+                    handleChange(field.key, val)
+                  )}
+                  {errors[field.key] && <span className="error-text">{errors[field.key]}</span>}
+                </Grid>
+              ))}
+          </Grid>
+        </Paper>
 
-                    return (
-                      <TableRow
-                        key={rowIndex}
-                        style={{
-                          backgroundColor: rowColor ? rowColor + "20" : "transparent",
-                        }}
-                      >
-                        {field.fields
-                          .filter((f) => f.type !== "list")
-                          .map((sub) => (
-                            <TableCell key={sub.key}>
-                              {sub.key === "item_name" ? (
-                                <Autocomplete
-                                  freeSolo // Allows typing new values
-                                  options={savedItems.map((i) => i.item_name)} // Use the item list from state
-                                  value={row[sub.key] || ""}
-                                  onInputChange={(_, newValue) => {
-                                    // Update state when user types or selects
-                                    handleListChange(field.key, rowIndex, sub.key, newValue || "");
-                                  }}
-                                  renderInput={(params) => (
-                                    <TextField
-                                      {...params}
-                                      label={sub.name}
-                                      margin="normal"
-                                      fullWidth
-                                      size="small"
-                                      // Display the item-specific error
-                                      error={!!errors[`item-${rowIndex}`]}
-                                      helperText={errors[`item-${rowIndex}`]}
-                                    />
-                                  )}
-                                />
-                              ) : (
-                                // This is the original logic for all other fields
-                                renderSimpleField(
-                                  sub,
-                                  row[sub.key],
-                                  (val) => handleListChange(field.key, rowIndex, sub.key, val)
-                                )
-                              )}
-                              {sub.key === "item_qty" && errors[`qty-${rowIndex}`] && (
-                                <span className="error-text">
-                                  {errors[`qty-${rowIndex}`]}
-                                </span>
-                              )}
-                            </TableCell>
-                          ))}
-                        <TableCell>
-                          ₹{calculateRepairCost(row.parts || []).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => setActiveParts({ parentKey: field.key, rowIndex })}
-                          >
-                            Parts
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <IconButton
-                            color="error"
-                            onClick={() => removeListRow(field.key, rowIndex)}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Paper>
-            <Button
-              startIcon={<AddCircle />}
-              onClick={() => addListRow(field.key, field.fields)}
-              className="add-row-btn"
-            >
-              Add {field.name}
-            </Button>
-          </div>
-        ))}
-
-      <Button variant="contained" color="primary" onClick={handleSave} className="save-btn" disabled={isPlanExpired}>
-        Save Job
-      </Button>
-
-      {/* Parts Modal */}
-      <Modal open={!!activeParts} onClose={() => setActiveParts(null)}>
-        <Box className="modal-box">
-          <Typography variant="h6">Parts</Typography>
-          {activeParts && (
-            <>
-              <Paper className="list-table">
+        {/* --- Items List --- */}
+        {schema
+          .filter((field) => field.type === "list")
+          .map((field) => (
+            <Paper key={field.key} className="form-section">
+              {errors.items && <span className="error-text">{errors.items}</span>}
+              <div className="table-responsive">
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Part Name</TableCell>
-                      <TableCell>Qty</TableCell>
-                      <TableCell>Price</TableCell>
+                      {field.fields
+                        .filter((f) => f.type !== "list")
+                        .map((sub) => (
+                          <TableCell key={sub.key}>{sub.name}</TableCell>
+                        ))}
+                      <TableCell>Repair Cost</TableCell>
+                      <TableCell>Parts</TableCell>
                       <TableCell>Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {(formData[activeParts.parentKey]?.[activeParts.rowIndex].parts || []).map(
-                      (p, idx) => (
-                        <TableRow key={idx}>
+                    {(formData[field.key] || []).map((row, rowIndex) => {
+                      const itemStatusField = field.fields.find((f) => f.key === "item_status");
+                      let rowColor = "";
+                      if (itemStatusField && row.item_status) {
+                        const selectedOpt = itemStatusField.options.find(
+                          (opt) => opt.value === row.item_status
+                        );
+                        if (selectedOpt?.color) {
+                          rowColor = selectedOpt.color;
+                        }
+                      }
+
+                      return (
+                        <TableRow
+                          key={rowIndex}
+                          style={{
+                            backgroundColor: rowColor ? rowColor + "20" : "transparent",
+                          }}
+                        >
+                          {field.fields
+                            .filter((f) => f.type !== "list")
+                            .map((sub) => (
+                              <TableCell key={sub.key} style={{ minWidth: 180 }}>
+                                {sub.key === "item_name" ? (
+                                  <Autocomplete
+                                    freeSolo
+                                    disabled={isPlanExpired}
+                                    options={savedItems.map((i) => i.item_name)}
+                                    value={row[sub.key] || ""}
+                                    onInputChange={(_, newValue) => {
+                                      handleListChange(field.key, rowIndex, sub.key, newValue || "");
+                                    }}
+                                    renderInput={(params) => (
+                                      <TextField
+                                        {...params}
+                                        label={sub.name}
+                                        margin="normal"
+                                        fullWidth
+                                        size="small"
+                                        error={!!errors[`item-${rowIndex}`]}
+                                        helperText={errors[`item-${rowIndex}`]}
+                                      />
+                                    )}
+                                  />
+                                ) : (
+                                  renderSimpleField(
+                                    sub,
+                                    row[sub.key],
+                                    (val) => handleListChange(field.key, rowIndex, sub.key, val)
+                                  )
+                                )}
+                                {sub.key === "item_qty" && errors[`qty-${rowIndex}`] && (
+                                  <span className="error-text">
+                                    {errors[`qty-${rowIndex}`]}
+                                  </span>
+                                )}
+                              </TableCell>
+                            ))}
                           <TableCell>
-                            <Autocomplete
-                              freeSolo
-                              options={savedParts.map((part) => part.part_name)}
-                              value={p.name || ""}
-                              onInputChange={(_, newValue) => {
-                                const newPartName = newValue || "";
-
-                                const foundPart = savedParts.find(
-                                  (sp) => sp.part_name === newPartName
-                                );
-
-                                const updated = [...formData[activeParts.parentKey]];
-                                const currentPart = updated[activeParts.rowIndex].parts[idx];
-
-                                currentPart.name = newPartName;
-
-                                if (foundPart) {
-                                  currentPart.price = foundPart.part_price;
-                                }
-
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  [activeParts.parentKey]: updated,
-                                }));
-                              }}
-                              renderInput={(params) => (
-                                <TextField {...params} size="small" label="Part Name" />
-                              )}
-                            />
+                            ₹{calculateRepairCost(row.parts || []).toFixed(2)}
                           </TableCell>
-
                           <TableCell>
-                            <TextField
-                              type="number"
-                              value={p.qty ?? ""}
-                              onChange={(e) => {
-                                const updated = [...formData[activeParts.parentKey]];
-                                updated[activeParts.rowIndex].parts[idx] = {
-                                  ...p,
-                                  qty: e.target.value,
-                                };
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  [activeParts.parentKey]: updated,
-                                }));
-                              }}
+                            <Button
+                              variant="outlined"
                               size="small"
-                            />
+                              onClick={() => setActiveParts({ parentKey: field.key, rowIndex })}
+                              disabled={isPlanExpired}
+                            >
+                              Parts
+                            </Button>
                           </TableCell>
-
-                          <TableCell>
-                            <TextField
-                              type="number"
-                              value={p.price ?? ""}
-                              onChange={(e) => {
-                                const updated = [...formData[activeParts.parentKey]];
-                                updated[activeParts.rowIndex].parts[idx] = {
-                                  ...p,
-                                  price: e.target.value,
-                                };
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  [activeParts.parentKey]: updated,
-                                }));
-                              }}
-                              size="small"
-                            />
-                          </TableCell>
-
                           <TableCell>
                             <IconButton
                               color="error"
-                              onClick={() => {
-                                const updated = [...formData[activeParts.parentKey]];
-                                updated[activeParts.rowIndex].parts =
-                                  updated[activeParts.rowIndex].parts.filter((_, i) => i !== idx);
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  [activeParts.parentKey]: updated,
-                                }));
-                              }}
+                              onClick={() => removeListRow(field.key, rowIndex)}
+                              disabled={isPlanExpired}
                             >
                               <Delete />
                             </IconButton>
                           </TableCell>
                         </TableRow>
-                      )
-                    )}
+                      );
+                    })}
                   </TableBody>
-
                 </Table>
-              </Paper>
-              {partsErrors && <span className="error-text">{partsErrors}</span>}
+              </div>
               <Button
                 startIcon={<AddCircle />}
-                onClick={() => {
-                  const updated = [...formData[activeParts.parentKey]];
-                  const currentParts = updated[activeParts.rowIndex].parts || [];
-                  updated[activeParts.rowIndex].parts = [
-                    ...currentParts,
-                    { name: "", qty: 1, price: 0 },
-                  ];
-                  setFormData((prev) => ({
-                    ...prev,
-                    [activeParts.parentKey]: updated,
-                  }));
-                }}
+                onClick={() => addListRow(field.key, field.fields)}
                 className="add-row-btn"
+                disabled={isPlanExpired}
               >
-                Add Part
+                Add {field.name}
               </Button>
-              <div className="modal-actions">
-                <Button variant="contained" onClick={handlePartsDone}>
-                  Done
+            </Paper>
+          ))}
+
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={handleSave} 
+          className="save-job-btn" 
+          disabled={isPlanExpired}
+        >
+          Save Job
+        </Button>
+
+        <Modal open={!!activeParts} onClose={() => setActiveParts(null)}>
+          <Box className="modal-box">
+            <Typography variant="h6" className="modal-title">Edit Parts</Typography>
+            {activeParts && (
+              <>
+                <div className="table-responsive">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Part Name</TableCell>
+                        <TableCell>Qty</TableCell>
+                        <TableCell>Price</TableCell>
+                        <TableCell>Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(formData[activeParts.parentKey]?.[activeParts.rowIndex].parts || []).map(
+                        (p, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell style={{ minWidth: 200 }}>
+                              <Autocomplete
+                                freeSolo
+                                disabled={isPlanExpired}
+                                options={savedParts.map((part) => part.part_name)}
+                                value={p.name || ""}
+                                onInputChange={(_, newValue) => {
+                                  const newPartName = newValue || "";
+                                  const foundPart = savedParts.find(
+                                    (sp) => sp.part_name === newPartName
+                                  );
+                                  const updated = [...formData[activeParts.parentKey]];
+                                  const currentPart = updated[activeParts.rowIndex].parts[idx];
+                                  currentPart.name = newPartName;
+                                  if (foundPart) {
+                                    currentPart.price = foundPart.part_price;
+                                  }
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    [activeParts.parentKey]: updated,
+                                  }));
+                                }}
+                                renderInput={(params) => (
+                                  <TextField {...params} size="small" label="Part Name" />
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell style={{ minWidth: 80 }}>
+                              <TextField
+                                type="number"
+                                value={p.qty ?? ""}
+                                disabled={isPlanExpired}
+                                onChange={(e) => {
+                                  const updated = [...formData[activeParts.parentKey]];
+                                  updated[activeParts.rowIndex].parts[idx] = {
+                                    ...p,
+                                    qty: e.target.value,
+                                  };
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    [activeParts.parentKey]: updated,
+                                  }));
+                                }}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell style={{ minWidth: 100 }}>
+                              <TextField
+                                type="number"
+                                value={p.price ?? ""}
+                                disabled={isPlanExpired}
+                                onChange={(e) => {
+                                  const updated = [...formData[activeParts.parentKey]];
+                                  updated[activeParts.rowIndex].parts[idx] = {
+                                    ...p,
+                                    price: e.target.value,
+                                  };
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    [activeParts.parentKey]: updated,
+                                  }));
+                                }}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <IconButton
+                                color="error"
+                                disabled={isPlanExpired}
+                                onClick={() => {
+                                  const updated = [...formData[activeParts.parentKey]];
+                                  updated[activeParts.rowIndex].parts =
+                                    updated[activeParts.rowIndex].parts.filter((_, i) => i !== idx);
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    [activeParts.parentKey]: updated,
+                                  }));
+                                }}
+                              >
+                                <Delete />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                {partsErrors && <span className="error-text">{partsErrors}</span>}
+                <Button
+                  startIcon={<AddCircle />}
+                  onClick={() => {
+                    const updated = [...formData[activeParts.parentKey]];
+                    const currentParts = updated[activeParts.rowIndex].parts || [];
+                    updated[activeParts.rowIndex].parts = [
+                      ...currentParts,
+                      { name: "", qty: 1, price: 0 },
+                    ];
+                    setFormData((prev) => ({
+                      ...prev,
+                      [activeParts.parentKey]: updated,
+                    }));
+                  }}
+                  className="add-row-btn"
+                  disabled={isPlanExpired}
+                >
+                  Add Part
                 </Button>
-              </div>
-            </>
-          )}
-        </Box>
-      </Modal>
-    </div>
+                <div className="modal-actions">
+                  <Button variant="contained" onClick={handlePartsDone}>
+                    Done
+                  </Button>
+                </div>
+              </>
+            )}
+          </Box>
+        </Modal>
+      </div>
+    </>
   );
 }
