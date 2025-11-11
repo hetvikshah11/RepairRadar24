@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import "./settings.css";
 import api from "../axiosConfig";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,6 @@ const generateKey = (name) => {
 };
 
 const FieldConfig = ({ fields, setFields, level = 0 }) => {
-    // ... (All the code for FieldConfig remains exactly the same) ...
     const addField = () => {
         const newField = {
             name: "",
@@ -201,7 +200,6 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
 // --- CONSTANTS ---
 
 const defaultConfig = [
-    // ... (defaultConfig array unchanged) ...
     { name: "Job Number", key: "job_no", type: "number", mandatory: true, options: [], fields: [] },
     { name: "Customer Phone", key: "customer_phone", type: "text", mandatory: true, options: [], fields: [] },
     { name: "Customer Name", key: "customer_name", type: "text", mandatory: true, options: [], fields: [] },
@@ -300,7 +298,6 @@ const Settings = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // ... (useEffect logic unchanged) ...
         const token = sessionStorage.getItem("token");
         if (!token) {
             alert("Please log in first.");
@@ -325,7 +322,27 @@ const Settings = () => {
         setPlanValidity(planValidityDate);
     }, [navigate]);
 
-    // ... (All fetch functions: fetchMessages, fetchCustomers, etc. remain unchanged) ...
+    const { isPlanExpired, formattedValidityDate } = useMemo(() => {
+        if (!planValidity) {
+            return { isPlanExpired: true, formattedValidityDate: null };
+        }
+
+        const validityDate = new Date(planValidity);
+
+        const formattedDate = validityDate.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        validityDate.setHours(23, 59, 59, 999);
+
+        const expired = new Date() > validityDate;
+
+        return { isPlanExpired: expired, formattedValidityDate: formattedDate };
+
+    }, [planValidity]);
+
     const fetchMessages = async () => {
         try {
             const token = sessionStorage.getItem("token");
@@ -408,17 +425,22 @@ const Settings = () => {
                 navigate("/");
             } else {
                 console.error("Error fetching configuration:", err);
-                alert("Sorry we could not fetch your past configuration. Loading default schema.");
+                alert(
+                    "Sorry we could not fetch your past configuration. Loading default schema."
+                );
                 setFields(defaultConfig);
             }
         }
     };
 
-    // ... (All handler functions: saveConfig, handleAddItem, etc. remain unchanged) ...
     const saveConfig = async () => {
         const token = sessionStorage.getItem("token");
         await api
-            .post("/user/save-config", { schema: fields }, { headers: { authorization: `Bearer ${token}` } })
+            .post(
+                "/user/save-config",
+                { schema: fields },
+                { headers: { authorization: `Bearer ${token}` } }
+            )
             .then((resp) => {
                 if (resp.status === 200) {
                     alert(resp.data.message);
@@ -470,8 +492,8 @@ const Settings = () => {
             });
             if (res.status === 200) {
                 alert("Item deleted successfully.");
-                setSavedItems(prevItems =>
-                    prevItems.filter(item => item._id !== id)
+                setSavedItems((prevItems) =>
+                    prevItems.filter((item) => item._id !== id)
                 );
             } else {
                 alert(res.data.message || "Failed to delete item.");
@@ -510,9 +532,11 @@ const Settings = () => {
                 });
                 if (res.data.success) {
                     alert("Part updated successfully.");
-                    setSavedParts(savedParts.map(p =>
-                        p._id === editingPartId ? res.data.part : p
-                    ));
+                    setSavedParts(
+                        savedParts.map((p) =>
+                            p._id === editingPartId ? res.data.part : p
+                        )
+                    );
                 }
             } else {
                 res = await api.post("/user/parts", payload, {
@@ -555,8 +579,8 @@ const Settings = () => {
             });
             if (res.status === 200) {
                 alert("Part deleted successfully.");
-                setSavedParts(prevParts =>
-                    prevParts.filter(part => part._id !== id)
+                setSavedParts((prevParts) =>
+                    prevParts.filter((part) => part._id !== id)
                 );
             } else {
                 alert(res.data.message || "Failed to delete part.");
@@ -576,8 +600,8 @@ const Settings = () => {
             });
             if (res.status === 200) {
                 alert("Customer deleted successfully.");
-                setCustomers(prevCustomers =>
-                    prevCustomers.filter(customer => customer._id !== id)
+                setCustomers((prevCustomers) =>
+                    prevCustomers.filter((customer) => customer._id !== id)
                 );
             } else {
                 alert(res.data.message || "Failed to delete customer.");
@@ -605,7 +629,6 @@ const Settings = () => {
     };
 
     const getRelevantFields = (schema) => {
-        // ... (getRelevantFields function unchanged) ...
         if (!schema?.schema) return [];
         const usefulKeys = ["job_no", "customer_name", "customer_phone", "item_name", "item_qty", "item_serial"];
         const fields = [];
@@ -625,7 +648,6 @@ const Settings = () => {
     };
 
     const handleSaveMessage = async () => {
-        // ... (handleSaveMessage function unchanged) ...
         if (!messageName.trim()) {
             alert("Please enter a message name.");
             return;
@@ -664,7 +686,6 @@ const Settings = () => {
     };
 
     const handleDeleteMessage = async (id) => {
-        // ... (handleDeleteMessage function unchanged) ...
         if (!window.confirm("Are you sure you want to delete this message?")) return;
         try {
             const token = sessionStorage.getItem("token");
@@ -679,7 +700,6 @@ const Settings = () => {
     };
 
     const openEditModal = (msg) => {
-        // ... (openEditModal function unchanged) ...
         setEditingMessageId(msg._id);
         setMessageName(msg.name);
         setCustomText(msg.text);
@@ -687,7 +707,6 @@ const Settings = () => {
     };
 
     const handleNameChange = async (e) => {
-        // ... (handleNameChange function unchanged) ...
         e.preventDefault();
         try {
             const token = sessionStorage.getItem("token");
@@ -710,7 +729,6 @@ const Settings = () => {
     };
 
     const handleVerifyPassword = async (e) => {
-        // ... (handleVerifyPassword function unchanged) ...
         e.preventDefault();
         try {
             const token = sessionStorage.getItem("token");
@@ -733,7 +751,6 @@ const Settings = () => {
     };
 
     const handlePasswordChange = async (e) => {
-        // ... (handlePasswordChange function unchanged) ...
         e.preventDefault();
         if (password !== confirmPassword) {
             alert("Passwords do not match!");
@@ -761,7 +778,6 @@ const Settings = () => {
     };
 
     const insertField = (key) => {
-        // ... (insertField function unchanged) ...
         if (!customTextRef.current) return;
         const textarea = customTextRef.current;
         const cursorPos = textarea.selectionStart;
@@ -780,7 +796,6 @@ const Settings = () => {
         <div style={{ margin: "0px" }}>
             <Navbar />
             <div className="settings-layout">
-                {/* Left Sidebar */}
                 <div className="settings-sidebar">
                     <button
                         className={`tab-btn ${activeTab === "personal" ? "active" : ""}`}
@@ -795,7 +810,8 @@ const Settings = () => {
                         WhatsApp Messages
                     </button>
                     <button
-                        className={`tab-btn ${activeTab === "customerdetails" ? "active" : ""}`}
+                        className={`tab-btn ${activeTab === "customerdetails" ? "active" : ""
+                            }`}
                         onClick={() => setActiveTab("customerdetails")}
                     >
                         Customer Details
@@ -812,33 +828,30 @@ const Settings = () => {
                     >
                         Saved Parts
                     </button>
-
-                    {/* 🚀 MODIFIED: This button now also triggers the warning modal */}
                     <button
                         className={`tab-btn ${activeTab === "jobcard" ? "active" : ""}`}
                         onClick={() => {
                             setActiveTab("jobcard");
-                            setShowConfigWarning(true); // <-- Set warning modal to true
+                            setShowConfigWarning(true);
                         }}
                     >
                         Customise Jobcard fields
                     </button>
-
                     <button
-                        className={`tab-btn ${activeTab === "subscription" ? "active" : ""}`}
+                        className={`tab-btn ${activeTab === "subscription" ? "active" : ""
+                            }`}
                         onClick={() => setActiveTab("subscription")}
                     >
                         Subscription Plans
                     </button>
                 </div>
 
-                {/* Right Content */}
                 <div className="settings-right">
                     {activeTab === "personal" && (
                         <>
-                            {/* ... (personal tab JSX unchanged) ... */}
                             <h2>Personal Information</h2>
                             <hr />
+
                             <form onSubmit={handleNameChange} className="settings-form">
                                 <label>Change Name</label>
                                 <div className="input-with-icon">
@@ -868,7 +881,10 @@ const Settings = () => {
                             </form>
                             <div className="settings-form">
                                 <label>Change Password</label>
-                                <form onSubmit={handleVerifyPassword} className="settings-form">
+                                <form
+                                    onSubmit={handleVerifyPassword}
+                                    className="settings-form"
+                                >
                                     <input
                                         type="password"
                                         placeholder="Enter current password"
@@ -884,7 +900,10 @@ const Settings = () => {
                                     )}
                                 </form>
                                 {isVerified && (
-                                    <form onSubmit={handlePasswordChange} className="settings-form">
+                                    <form
+                                        onSubmit={handlePasswordChange}
+                                        className="settings-form"
+                                    >
                                         <input
                                             type="password"
                                             placeholder="Enter new password"
@@ -910,7 +929,6 @@ const Settings = () => {
 
                     {activeTab === "whatsapp" && (
                         <>
-                            {/* ... (whatsapp tab JSX unchanged) ... */}
                             <h2>WhatsApp Messages</h2>
                             <hr />
                             <div className="whatsapp-scroll">
@@ -919,7 +937,10 @@ const Settings = () => {
                                         <h4>{msg.name}</h4>
                                         <p className="msg-preview">{msg.text.slice(0, 80)}...</p>
                                         <div className="msg-actions">
-                                            <button className="icon-btn" onClick={() => openEditModal(msg)}>
+                                            <button
+                                                className="icon-btn"
+                                                onClick={() => openEditModal(msg)}
+                                            >
                                                 <FaEdit />
                                             </button>
                                             <button
@@ -944,7 +965,6 @@ const Settings = () => {
 
                     {activeTab === "customerdetails" && (
                         <>
-                            {/* ... (customerdetails tab JSX unchanged) ... */}
                             <h2>Customer Details</h2>
                             <hr />
                             <div className="customer-table-container">
@@ -965,7 +985,9 @@ const Settings = () => {
                                                     <td>
                                                         <button
                                                             className="icon-btn delete-btn"
-                                                            onClick={() => handleDeleteCustomer(customer._id)}
+                                                            onClick={() =>
+                                                                handleDeleteCustomer(customer._id)
+                                                            }
                                                         >
                                                             <FaTrash />
                                                         </button>
@@ -987,10 +1009,13 @@ const Settings = () => {
 
                     {activeTab === "saveditems" && (
                         <>
-                            {/* ... (saveditems tab JSX unchanged) ... */}
                             <h2>Saved Items</h2>
                             <hr />
-                            <form onSubmit={handleAddItem} className="settings-form saved-item-form">
+
+                            <form
+                                onSubmit={handleAddItem}
+                                className="settings-form saved-item-form"
+                            >
                                 <label>Add New Item</label>
                                 <div className="input-with-button">
                                     <input
@@ -1005,6 +1030,7 @@ const Settings = () => {
                                     </button>
                                 </div>
                             </form>
+
                             <div className="saved-items-list-container">
                                 <h4>Existing Items</h4>
                                 {savedItems.length > 0 ? (
@@ -1022,7 +1048,13 @@ const Settings = () => {
                                         ))}
                                     </ul>
                                 ) : (
-                                    <p style={{ textAlign: "center", color: "#888", marginTop: "20px" }}>
+                                    <p
+                                        style={{
+                                            textAlign: "center",
+                                            color: "#888",
+                                            marginTop: "20px",
+                                        }}
+                                    >
                                         No saved items found.
                                     </p>
                                 )}
@@ -1032,11 +1064,15 @@ const Settings = () => {
 
                     {activeTab === "savedparts" && (
                         <>
-                            {/* ... (savedparts tab JSX unchanged) ... */}
                             <h2>Saved Parts</h2>
                             <hr />
-                            <form onSubmit={handleSavePart} className="settings-form saved-item-form">
-                                <label>{editingPartId ? "Edit Part" : "Add New Part"}</label>
+                            <form
+                                onSubmit={handleSavePart}
+                                className="settings-form saved-item-form"
+                            >
+                                <label>
+                                    {editingPartId ? "Edit Part" : "Add New Part"}
+                                </label>
                                 <div className="input-with-button">
                                     <input
                                         type="text"
@@ -1059,20 +1095,27 @@ const Settings = () => {
                                         {editingPartId ? " Update" : " Save"}
                                     </button>
                                     {editingPartId && (
-                                        <button type="button" className="cancel-btn" onClick={clearPartForm}>
+                                        <button
+                                            type="button"
+                                            className="cancel-btn"
+                                            onClick={clearPartForm}
+                                        >
                                             Cancel
                                         </button>
                                     )}
                                 </div>
                             </form>
-                            <div className="customer-table-container" style={{ marginTop: '30px' }}>
+                            <div
+                                className="customer-table-container"
+                                style={{ marginTop: "30px" }}
+                            >
                                 <h4>Existing Parts</h4>
                                 <table className="customer-table">
                                     <thead>
                                         <tr>
                                             <th>Part Name</th>
                                             <th>Part Price</th>
-                                            <th style={{ width: '100px' }}>Actions</th>
+                                            <th style={{ width: "100px" }}>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1112,12 +1155,15 @@ const Settings = () => {
 
                     {activeTab === "jobcard" && (
                         <>
-                            {/* ... (jobcard tab JSX unchanged) ... */}
                             <h2>Customise Jobcard fields</h2>
                             <hr />
                             <FieldConfig fields={fields} setFields={setFields} />
                             <br />
-                            <button onClick={saveConfig} className="save-btn" style={{ alignSelf: 'flex-start' }}>
+                            <button
+                                onClick={saveConfig}
+                                className="save-btn"
+                                style={{ alignSelf: "flex-start" }}
+                            >
                                 Save Configuration
                             </button>
                         </>
@@ -1125,9 +1171,39 @@ const Settings = () => {
 
                     {activeTab === "subscription" && (
                         <>
-                            {/* ... (subscription tab JSX unchanged) ... */}
                             <h2>Subscription Plans</h2>
                             <hr />
+
+                            {isPlanExpired ? (
+                                <div className="plan-status status-expired" style={{ display: 'flex', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '1.5rem', marginRight: '15px' }}>⚠️</span>
+                                    <div>
+                                        <strong>Your plan has expired.</strong> Some features may not be available.
+                                        <br />
+                                        Contact <strong>+91 9601613653</strong> for renewal.
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="plan-status status-active" style={{ display: 'flex', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '1.5rem', marginRight: '15px' }}>✅</span>
+                                    <div>
+                                        <strong>Your plan is active.</strong>
+                                        <br />
+                                        It will expire on: <strong>{formattedValidityDate}</strong>
+                                    </div>
+                                </div>
+                            )}
+
+                            <h3
+                                style={{
+                                    marginTop: "30px",
+                                    borderBottom: "1px solid #ddd",
+                                    paddingBottom: "10px",
+                                    width: "100%",
+                                }}
+                            >
+                                Available Plans
+                            </h3>
                             <div className="plans-container">
                                 {plans.map((plan) => (
                                     <div key={plan.id} className="plan-card">
@@ -1139,17 +1215,16 @@ const Settings = () => {
                             </div>
                         </>
                     )}
-
                 </div>
             </div>
 
-            {/* Modal for WhatsApp */}
             {showModal && (
                 <div className="modal-overlay">
-                    {/* ... (modal JSX unchanged) ... */}
                     <div className="modal-content modal-grid">
                         <div className="modal-left">
-                            <h3>{editingMessageId ? "Edit Message" : "Create New Message"}</h3>
+                            <h3>
+                                {editingMessageId ? "Edit Message" : "Create New Message"}
+                            </h3>
                             <label>Message Name</label>
                             <input
                                 type="text"
@@ -1176,12 +1251,15 @@ const Settings = () => {
                                 <button className="update-btn" onClick={handleSaveMessage}>
                                     Save
                                 </button>
-                                <button className="cancel-btn" onClick={() => {
-                                    setShowModal(false);
-                                    setEditingMessageId(null);
-                                    setMessageName("");
-                                    setCustomText("");
-                                }}>
+                                <button
+                                    className="cancel-btn"
+                                    onClick={() => {
+                                        setShowModal(false);
+                                        setEditingMessageId(null);
+                                        setMessageName("");
+                                        setCustomText("");
+                                    }}
+                                >
                                     Cancel
                                 </button>
                             </div>
@@ -1208,35 +1286,53 @@ const Settings = () => {
                 </div>
             )}
 
-            {/* 🚀 NEW: Warning Modal for Job Card Config */}
             {showConfigWarning && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '600px' }}>
-                        <h2 style={{ marginTop: 0, color: '#d9534f' }}>⚠️ Important: Read Before Editing Schema</h2>
-                        <p>You are about to make changes to your core job card structure. Please read these points carefully:</p>
-                        <ul style={{ paddingLeft: '20px', lineHeight: '1.6' }}>
+                    <div className="modal-content" style={{ maxWidth: "600px" }}>
+                        <h2 style={{ marginTop: 0, color: "#d9534f" }}>
+                            ⚠️ Important: Read Before Editing Schema
+                        </h2>
+                        <p>
+                            You are about to make changes to your core job card structure.
+                            Please read these points carefully:
+                        </p>
+                        <ul style={{ paddingLeft: "20px", lineHeight: "1.6" }}>
                             <li>
-                                <b>Mandatory Fields:</b> Core fields (like 'Job Number', 'Customer Name') are locked. They cannot be renamed or deleted to ensure your app continues to work correctly.
+                                <b>Mandatory Fields:</b> Core fields (like 'Job Number',
+                                'Customer Name') are locked. They cannot be renamed or deleted
+                                to ensure your app continues to work correctly.
                             </li>
-                            <li style={{ marginTop: '10px' }}>
-                                <b>Adding New Fields:</b> When you add a new field, all your **existing** job cards will not have this field. It will appear as empty or 'null' until you manually edit and save those old job cards.
+                            <li style={{ marginTop: "10px" }}>
+                                <b>Adding New Fields:</b> When you add a new field, all your{" "}
+                                <strong>existing</strong> job cards will not have this field. It
+                                will appear as empty or 'null' until you manually edit and save
+                                those old job cards.
                             </li>
-                            <li style={{ marginTop: '10px' }}>
-                                <b>Deleting Fields:</b> When you delete a non-mandatory field, the data for that field will be **hidden** from *all* existing and new job cards.
+                            <li style={{ marginTop: "10px" }}>
+                                <b>Deleting Fields:</b> When you delete a non-mandatory field,
+                                the data for that field will be <strong>hidden</strong> from{" "}
+                                <i>all</i> existing and new job cards.
                             </li>
-                            <li style={{ marginTop: '10px' }}>
-                                <b>Recommendation:</b> It is highly recommended to finalize your schema and **make changes infrequently**. Changing your structure often can lead to data inconsistencies.
+                            <li style={{ marginTop: "10px" }}>
+                                <b>Recommendation:</b> It is highly recommended to finalize your
+                                schema and <strong>make changes infrequently</strong>.
+                                Changing your structure often can lead to data inconsistencies.
                             </li>
                         </ul>
-                        <div className="modal-actions" style={{ justifyContent: 'flex-end', marginTop: '20px' }}>
-                            <button className="update-btn" onClick={() => setShowConfigWarning(false)}>
+                        <div
+                            className="modal-actions"
+                            style={{ justifyContent: "flex-end", marginTop: "20px" }}
+                        >
+                            <button
+                                className="update-btn"
+                                onClick={() => setShowConfigWarning(false)}
+                            >
                                 I Understand, Continue
                             </button>
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 };
