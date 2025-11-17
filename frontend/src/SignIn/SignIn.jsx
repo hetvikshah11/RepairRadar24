@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../axiosConfig.js';
 import "bootstrap/dist/css/bootstrap.min.css";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const defaultConfig = [
     { name: "Job Number", key: "job_no", type: "number", mandatory: true, options: [], fields: [] },
@@ -82,14 +84,16 @@ export default function SignIn() {
     const handleSignInSubmit = async (e) => {
         e.preventDefault();
         setError("");
+
         try {
             await api.post("/api/signin", signInData).then(async (resp) => {
                 if (resp.status === 204) {
-                    alert("Account not approved by owner. Contact 9601613653");
+                    toast.warn("Account not approved by owner. Contact 9601613653");
                     return;
                 }
+
                 if (resp.status === 200) {
-                    alert("Welcome " + resp.data.user.name);
+                    toast.success("Welcome " + resp.data.user.name);
                     sessionStorage.setItem("token", resp.data.token);
                     sessionStorage.setItem("userName", resp.data.user.name);
                     sessionStorage.setItem("isPlanExpired", resp.data.isPlanExpired);
@@ -99,16 +103,18 @@ export default function SignIn() {
 
                     if (!resp.data.schemaConfigured) {
                         try {
-                            await api.post("/user/save-config",
+                            await api.post(
+                                "/user/save-config",
                                 { schema: defaultConfig },
                                 { headers: { authorization: `Bearer ${token}` } }
                             );
 
                             navigate("/dashboard");
-
                         } catch (configErr) {
                             console.error("Failed to save default config:", configErr);
-                            setError("Sign in successful, but failed to save default settings. Please contact support.");
+                            const configErrorMessage = "Sign in successful, but failed to save default settings. Please contact support.";
+                            setError(configErrorMessage);
+                            toast.error(configErrorMessage);
                         }
                     } else {
                         navigate("/dashboard");
@@ -116,37 +122,42 @@ export default function SignIn() {
                 }
             });
         } catch (err) {
-            setError(err.response?.data?.message || "Sign in failed.");
+            let errorMessage = "Sign in failed.";
             if (err.response?.status === 401) {
-                alert("Incorrect password");
+                errorMessage = "Incorrect password";
+            } else if (err.response?.status === 404) {
+                errorMessage = "No user found with this email.";
+            } else if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
             }
-            else if (err.response?.status === 404) {
-                alert("No user found with this email.");
-            }
-            else {
-                alert("Something went wrong!!");
-            }
+
+            setError(errorMessage);
+            toast.error(errorMessage);
         }
     };
 
     const handleSignUpSubmit = async (e) => {
         e.preventDefault();
         setError("");
+
         try {
             await api.post("/api/signup", signUpData).then((resp) => {
-                if (resp.status == 201) {
-                    alert(resp.data.message);
+                if (resp.status === 201) {
+                    toast.success(resp.data.message);
                 }
             });
             setIsSignUp(false);
         } catch (err) {
-            alert(err);
-            setError(err.response?.data?.message || "Sign up failed.");
+            const errorMessage = err.response?.data?.message || "Sign up failed.";
+            setError(errorMessage);
+            toast.error(errorMessage);
         }
     };
 
     return (
         <div className="signin-page">
+            <ToastContainer position="top-right" autoClose={5000} />
+
             <div className="signin-card shadow">
                 <h1 className="site-title">RepairRadar</h1>
                 <h3 className="text-center mb-4">{isSignUp ? "Create Account" : "Sign In"}</h3>
@@ -166,6 +177,7 @@ export default function SignIn() {
                                 required
                             />
                         </div>
+
                         <div className="mb-3">
                             <label className="form-label">Email</label>
                             <input
@@ -177,6 +189,7 @@ export default function SignIn() {
                                 required
                             />
                         </div>
+
                         <div className="mb-3">
                             <label className="form-label">Password</label>
                             <input
@@ -188,9 +201,11 @@ export default function SignIn() {
                                 required
                             />
                         </div>
+
                         <button type="submit" className="btn btn-gradient w-100">
                             Sign Up
                         </button>
+
                         <p className="text-center mt-3">
                             Already have an account?{" "}
                             <button type="button" className="btn btn-link p-0" onClick={() => setIsSignUp(false)}>
@@ -211,6 +226,7 @@ export default function SignIn() {
                                 required
                             />
                         </div>
+
                         <div className="mb-3">
                             <label className="form-label">Password</label>
                             <input
@@ -222,9 +238,11 @@ export default function SignIn() {
                                 required
                             />
                         </div>
+
                         <button type="submit" className="btn btn-gradient w-100">
                             Sign In
                         </button>
+
                         <p className="text-center mt-3">
                             Don’t have an account?{" "}
                             <button type="button" className="btn btn-link p-0" onClick={() => setIsSignUp(true)}>

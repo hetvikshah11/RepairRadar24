@@ -4,6 +4,8 @@ import api from "../axiosConfig";
 import { useNavigate } from "react-router-dom";
 import { FaPen, FaPlus, FaTrash, FaEdit, FaSave } from "react-icons/fa";
 import Navbar from "../Navbar/Navbar";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // --- HELPER COMPONENTS ---
 
@@ -54,7 +56,7 @@ const FieldConfig = ({ fields, setFields, level = 0 }) => {
     const removeField = (index) => {
         const field = fields[index];
         if (field.mandatory) {
-            alert(`The field "${field.name}" is mandatory and cannot be removed.`);
+            toast.warn(`The field "${field.name}" is mandatory and cannot be removed.`);
             return;
         }
         setFields(fields.filter((_, i) => i !== index));
@@ -300,7 +302,7 @@ const Settings = () => {
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         if (!token) {
-            alert("Please log in first.");
+            toast.error("Please log in first.");
             navigate("/");
             return;
         }
@@ -352,6 +354,7 @@ const Settings = () => {
             setMessages(res.data || []);
         } catch (err) {
             console.error("Error fetching messages:", err);
+            toast.error("Failed to fetch messages.");
         }
     };
 
@@ -365,12 +368,15 @@ const Settings = () => {
                 setCustomers(res.data.customers || []);
             } else {
                 console.error("Failed to fetch customers:", res.data.message);
+                toast.error(res.data.message || "Failed to fetch customers.");
             }
         } catch (err) {
             console.error("Error fetching customers:", err);
             if (err.response?.status === 401) {
-                alert("Session expired. Please log in again.");
+                toast.error("Session expired. Please log in again.");
                 navigate("/");
+            } else {
+                toast.error("Failed to fetch customers.");
             }
         }
     };
@@ -385,9 +391,11 @@ const Settings = () => {
                 setSavedItems(res.data.items || []);
             } else {
                 console.error("Failed to fetch items:", res.data.message);
+                toast.error(res.data.message || "Failed to fetch items.");
             }
         } catch (err) {
             console.error("Error fetching items:", err);
+            toast.error("Failed to fetch items.");
         }
     };
 
@@ -401,9 +409,11 @@ const Settings = () => {
                 setSavedParts(res.data.parts || []);
             } else {
                 console.error("Failed to fetch parts:", res.data.message);
+                toast.error(res.data.message || "Failed to fetch parts.");
             }
         } catch (err) {
             console.error("Error fetching parts:", err);
+            toast.error("Failed to fetch parts.");
         }
     };
 
@@ -421,13 +431,11 @@ const Settings = () => {
             }
         } catch (err) {
             if (err.response && err.response.status === 401) {
-                alert("Unauthorized. Please log in again.");
+                toast.error("Unauthorized. Please log in again.");
                 navigate("/");
             } else {
                 console.error("Error fetching configuration:", err);
-                alert(
-                    "Sorry we could not fetch your past configuration. Loading default schema."
-                );
+                toast.error("Sorry we could not fetch your past configuration. Loading default schema.");
                 setFields(defaultConfig);
             }
         }
@@ -443,16 +451,16 @@ const Settings = () => {
             )
             .then((resp) => {
                 if (resp.status === 200) {
-                    alert(resp.data.message);
+                    toast.success(resp.data.message || "Configuration saved successfully.");
                 }
             })
             .catch((err) => {
                 if (err.status === 401) {
-                    alert("Unauthorized. Please log in again.");
+                    toast.error("Unauthorized. Please log in again.");
                     navigate("/");
                 } else {
                     console.error("Error saving configuration:", err);
-                    alert("Failed to save configuration. Please try again.");
+                    toast.error("Failed to save configuration. Please try again.");
                 }
             });
     };
@@ -461,7 +469,7 @@ const Settings = () => {
         e.preventDefault();
         const trimmedItemName = itemName.trim();
         if (!trimmedItemName) {
-            alert("Please enter an item name.");
+            toast.warn("Please enter an item name.");
             return;
         }
         try {
@@ -471,15 +479,15 @@ const Settings = () => {
                 headers: { authorization: `Bearer ${token}` },
             });
             if (res.data.success) {
-                alert("Item added successfully.");
+                toast.success("Item added successfully.");
                 setSavedItems([...savedItems, res.data.item]);
                 setItemName("");
             } else {
-                alert(res.data.message || "Failed to add item.");
+                toast.error(res.data.message || "Failed to add item.");
             }
         } catch (err) {
             console.error("Error adding item:", err);
-            alert(err.response?.data?.message || "Failed to add item.");
+            toast.error(err.response?.data?.message || "Failed to add item.");
         }
     };
 
@@ -491,16 +499,16 @@ const Settings = () => {
                 headers: { authorization: `Bearer ${token}` },
             });
             if (res.status === 200) {
-                alert("Item deleted successfully.");
+                toast.success("Item deleted successfully.");
                 setSavedItems((prevItems) =>
                     prevItems.filter((item) => item._id !== id)
                 );
             } else {
-                alert(res.data.message || "Failed to delete item.");
+                toast.error(res.data.message || "Failed to delete item.");
             }
         } catch (err) {
             console.error("Error deleting item:", err);
-            alert(err.response?.data?.message || "Failed to delete item.");
+            toast.error(err.response?.data?.message || "Failed to delete item.");
         }
     };
 
@@ -515,11 +523,11 @@ const Settings = () => {
         const trimmedPartName = partName.trim();
         const price = parseFloat(partPrice);
         if (!trimmedPartName) {
-            alert("Please enter a part name.");
+            toast.warn("Please enter a part name.");
             return;
         }
         if (isNaN(price) || price < 0) {
-            alert("Please enter a valid price.");
+            toast.warn("Please enter a valid price.");
             return;
         }
         const payload = { part_name: trimmedPartName, part_price: price };
@@ -531,7 +539,7 @@ const Settings = () => {
                     headers: { authorization: `Bearer ${token}` },
                 });
                 if (res.data.success) {
-                    alert("Part updated successfully.");
+                    toast.success("Part updated successfully.");
                     setSavedParts(
                         savedParts.map((p) =>
                             p._id === editingPartId ? res.data.part : p
@@ -543,23 +551,23 @@ const Settings = () => {
                     headers: { authorization: `Bearer ${token}` },
                 });
                 if (res.data.success) {
-                    alert("Part added successfully.");
+                    toast.success("Part added successfully.");
                     setSavedParts([...savedParts, res.data.part]);
                 }
             }
             if (res.data.success) {
                 clearPartForm();
             } else {
-                alert(res.data.message || "Failed to save part.");
+                toast.error(res.data.message || "Failed to save part.");
             }
         } catch (err) {
             console.error("Error saving part:", err);
             if (err.response?.status === 401) {
-                alert("Session expired. Please log in again.");
+                toast.error("Session expired. Please log in again.");
                 navigate("/");
                 return;
             }
-            alert(err.response?.data?.message || "Failed to save part.");
+            toast.error(err.response?.data?.message || "Failed to save part.");
         }
     };
 
@@ -578,16 +586,16 @@ const Settings = () => {
                 headers: { authorization: `Bearer ${token}` },
             });
             if (res.status === 200) {
-                alert("Part deleted successfully.");
+                toast.success("Part deleted successfully.");
                 setSavedParts((prevParts) =>
                     prevParts.filter((part) => part._id !== id)
                 );
             } else {
-                alert(res.data.message || "Failed to delete part.");
+                toast.error(res.data.message || "Failed to delete part.");
             }
         } catch (err) {
             console.error("Error deleting part:", err);
-            alert(err.response?.data?.message || "Failed to delete part.");
+            toast.error(err.response?.data?.message || "Failed to delete part.");
         }
     };
 
@@ -599,16 +607,16 @@ const Settings = () => {
                 headers: { authorization: `Bearer ${token}` },
             });
             if (res.status === 200) {
-                alert("Customer deleted successfully.");
+                toast.success("Customer deleted successfully.");
                 setCustomers((prevCustomers) =>
                     prevCustomers.filter((customer) => customer._id !== id)
                 );
             } else {
-                alert(res.data.message || "Failed to delete customer.");
+                toast.error(res.data.message || "Failed to delete customer.");
             }
         } catch (err) {
             console.error("Error deleting customer:", err);
-            alert(err.response?.data?.message || "Failed to delete customer.");
+            toast.error(err.response?.data?.message || "Failed to delete customer.");
         }
     };
 
@@ -621,10 +629,11 @@ const Settings = () => {
             setJobCardSchema(res.data);
         } catch (err) {
             if (err.response?.status === 401) {
-                alert("Session expired. Please log in again.");
+                toast.error("Session expired. Please log in again.");
                 navigate("/");
             }
             console.error("Error fetching schema:", err);
+            toast.error("Failed to fetch schema.");
         }
     };
 
@@ -649,7 +658,7 @@ const Settings = () => {
 
     const handleSaveMessage = async () => {
         if (!messageName.trim()) {
-            alert("Please enter a message name.");
+            toast.warn("Please enter a message name.");
             return;
         }
         const token = sessionStorage.getItem("token");
@@ -672,7 +681,7 @@ const Settings = () => {
                 });
             }
             if (res.status === 200 || res.status === 201) {
-                alert(`Message ${editingMessageId ? "updated" : "created"} successfully`);
+                toast.success(`Message ${editingMessageId ? "updated" : "created"} successfully`);
                 setShowModal(false);
                 setEditingMessageId(null);
                 setMessageName("");
@@ -681,7 +690,7 @@ const Settings = () => {
             }
         } catch (err) {
             console.error("Error saving message:", err);
-            alert("Failed to save message.");
+            toast.error("Failed to save message.");
         }
     };
 
@@ -693,9 +702,10 @@ const Settings = () => {
                 headers: { authorization: `Bearer ${token}` },
             });
             setMessages(messages.filter((m) => m._id !== id));
+            toast.success("Message deleted successfully.");
         } catch (err) {
             console.error("Error deleting message:", err);
-            alert("Failed to delete message.");
+            toast.error("Failed to delete message.");
         }
     };
 
@@ -717,7 +727,7 @@ const Settings = () => {
                 { headers: { authorization: `Bearer ${token}` } }
             );
             if (resp.status === 200) {
-                alert("Name updated successfully to " + resp.data.name);
+                toast.success("Name updated successfully to " + resp.data.name);
                 sessionStorage.setItem("userName", resp.data.name);
                 setName(resp.data.name);
                 setOriginalName(resp.data.name);
@@ -725,6 +735,7 @@ const Settings = () => {
             }
         } catch (err) {
             console.error("Error updating business name:", err);
+            toast.error("Failed to update name.");
         }
     };
 
@@ -739,21 +750,21 @@ const Settings = () => {
                 { headers: { authorization: `Bearer ${token}` } }
             );
             if (resp.status === 200 && resp.data.verified) {
-                alert("Password verified successfully.");
+                toast.success("Password verified successfully.");
                 setIsVerified(true);
             } else {
-                alert("Incorrect password. Please try again.");
+                toast.error("Incorrect password. Please try again.");
             }
         } catch (err) {
             console.error("Error verifying password:", err);
-            alert(err.response?.data?.message || "Verification failed.");
+            toast.error(err.response?.data?.message || "Verification failed.");
         }
     };
 
     const handlePasswordChange = async (e) => {
         e.preventDefault();
         if (password !== confirmPassword) {
-            alert("Passwords do not match!");
+            toast.warn("Passwords do not match!");
             return;
         }
         try {
@@ -765,7 +776,7 @@ const Settings = () => {
                 { headers: { authorization: `Bearer ${token}` } }
             );
             if (resp.status === 200) {
-                alert("Password updated successfully.");
+                toast.success("Password updated successfully.");
                 setCurrentPassword("");
                 setPassword("");
                 setConfirmPassword("");
@@ -773,7 +784,7 @@ const Settings = () => {
             }
         } catch (err) {
             console.error("Error updating password:", err);
-            alert(err.response?.data?.message || "Password update failed.");
+            toast.error(err.response?.data?.message || "Password update failed.");
         }
     };
 
@@ -794,6 +805,7 @@ const Settings = () => {
 
     return (
         <div style={{ margin: "0px" }}>
+            <ToastContainer position="top-right" autoClose={5000} />
             <Navbar />
             <div className="settings-layout">
                 <div className="settings-sidebar">

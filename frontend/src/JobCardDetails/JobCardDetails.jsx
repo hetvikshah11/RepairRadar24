@@ -17,13 +17,21 @@ import {
   Typography,
   Checkbox, // 🟢 NEW
   List,
-  ListItemButton,
-  ListItemText,
 } from "@mui/material";
-import { AddCircle, Delete, WhatsApp } from "@mui/icons-material"; // 🟢 NEW
+import {
+  AddCircle,
+  Delete,
+  WhatsApp
+} from "@mui/icons-material"; // 🟢 NEW
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import api from "../axiosConfig";
 import "./jobcarddetails.css";
 import Navbar from "../Navbar/Navbar";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function JobCardDetails() {
   const { id } = useParams();
@@ -40,11 +48,29 @@ export default function JobCardDetails() {
   const [savedItems, setSavedItems] = useState([]);
   const [savedParts, setSavedParts] = useState([]);
 
+  // Confirm dialog state & resolver
+  const [confirmState, setConfirmState] = useState({
+    open: false,
+    message: "",
+    resolver: null,
+  });
+
+  // askConfirm returns a Promise<boolean>
+  const askConfirm = (message) =>
+    new Promise((resolve) => {
+      setConfirmState({ open: true, message, resolver: resolve });
+    });
+
+  const handleCloseConfirm = (result) => {
+    if (confirmState.resolver) confirmState.resolver(result);
+    setConfirmState({ open: false, message: "", resolver: null });
+  };
+
   // ✅ Fetch schema + job data
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     if (!token) {
-      alert("Please log in first.");
+      toast.error("Please log in first.");
       navigate("/");
       return;
     }
@@ -66,7 +92,7 @@ export default function JobCardDetails() {
       })
       .catch((err) => {
         console.error("Error loading job details:", err);
-        alert("Could not load job details.");
+        toast.error("Could not load job details.");
         navigate("/dashboard");
       })
       .finally(() => setLoading(false));
@@ -82,7 +108,7 @@ export default function JobCardDetails() {
       setWhatsappMessages(res.data || []);
     } catch (err) {
       console.error("Error fetching WhatsApp messages:", err);
-      alert("Could not load WhatsApp messages.");
+      toast.error("Could not load WhatsApp messages.");
     }
   };
 
@@ -211,7 +237,7 @@ export default function JobCardDetails() {
   // ✅ Save job
   const handleSave = async () => {
     if (!validateForm()) {
-      alert("Please fix validation errors before saving.");
+      toast.error("Please fix validation errors before saving.");
       return;
     }
 
@@ -220,11 +246,11 @@ export default function JobCardDetails() {
       await api.put(`/user/jobs/updatejobcard/${id}`, formData, {
         headers: { authorization: `Bearer ${token}` },
       });
-      alert("Job updated successfully!");
+      toast.success("Job updated successfully!");
       navigate("/dashboard");
     } catch (err) {
       console.error("Job update failed:", err);
-      alert("Could not update job.");
+      toast.error("Could not update job.");
     }
   };
 
@@ -236,6 +262,7 @@ export default function JobCardDetails() {
     for (let p of rowParts) {
       if (!p.name?.trim()) {
         setPartsErrors("Part name cannot be empty.");
+        toast.warn("Part name cannot be empty.");
         return;
       }
     }
@@ -256,7 +283,6 @@ export default function JobCardDetails() {
 
   // 🟢 Toggle item selection for WhatsApp
   const toggleWhatsappItem = (index) => {
-    console.log("Toggling WhatsApp item:", index);
     setWhatsappItems((prev) => {
       const exists = prev.includes(index);
       if (exists) {
@@ -386,13 +412,11 @@ export default function JobCardDetails() {
       .trim();
   }
 
-
-
-
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
     <>
+      <ToastContainer position="top-right" autoClose={5000} />
       <Navbar />
       <div className="page-container">
         <h2 className="title">Job Card Details</h2>
@@ -507,7 +531,10 @@ export default function JobCardDetails() {
                           <TableCell>
                             <IconButton
                               color="error"
-                              onClick={() => removeListRow(field.key, rowIndex)}
+                              onClick={async () => {
+                                const ok = await askConfirm("Are you sure you want to remove this item?");
+                                if (ok) removeListRow(field.key, rowIndex);
+                              }}
                             >
                               <Delete />
                             </IconButton>
@@ -576,7 +603,7 @@ export default function JobCardDetails() {
                     onClick={async () => {
                       const phone = formData.customer_phone;
                       if (!phone) {
-                        alert("No customer phone found.");
+                        toast.warn("No customer phone found.");
                         return;
                       }
 
@@ -585,8 +612,10 @@ export default function JobCardDetails() {
                       try {
                         await navigator.clipboard.writeText(finalMessage);
                         console.log("WhatsApp message copied to clipboard!");
+                        toast.success("Message copied to clipboard.");
                       } catch (err) {
                         console.error("Failed to copy message:", err);
+                        toast.warn("Failed to copy to clipboard — opening WhatsApp link instead.");
                       }
 
                       const encoded = encodeURIComponent(finalMessage.trim());
@@ -609,7 +638,6 @@ export default function JobCardDetails() {
                   >
                     {msg.name || "Message"}
                   </Button>
-
                 ))}
               </List>
             )}
@@ -621,7 +649,7 @@ export default function JobCardDetails() {
           </Box>
         </Modal>
 
-        {/* Parts Modal (unchanged) */}
+        {/* Parts Modal */}
         <Modal open={!!activeParts} onClose={() => setActiveParts(null)}>
           <Box className="modal-box">
             <Typography variant="h6">Parts</Typography>
@@ -725,7 +753,9 @@ export default function JobCardDetails() {
                             <TableCell>
                               <IconButton
                                 color="error"
-                                onClick={() => {
+                                onClick={async () => {
+                                  const ok = await askConfirm("Are you sure you want to delete this part?");
+                                  if (!ok) return;
                                   const updated = [...formData[activeParts.parentKey]];
                                   updated[activeParts.rowIndex].parts =
                                     updated[activeParts.rowIndex].parts.filter((_, i) => i !== idx);
@@ -739,12 +769,10 @@ export default function JobCardDetails() {
                                 <Delete />
                               </IconButton>
                             </TableCell>
-
                           </TableRow>
                         )
                       )}
                     </TableBody>
-
                   </Table>
                 </Paper>
                 {partsErrors && <span className="error-text">{partsErrors}</span>}
@@ -775,6 +803,20 @@ export default function JobCardDetails() {
             )}
           </Box>
         </Modal>
+
+        {/* Confirm dialog (replaces window.confirm usage) */}
+        <Dialog open={confirmState.open} onClose={() => handleCloseConfirm(false)}>
+          <DialogTitle>Confirm</DialogTitle>
+          <DialogContent>
+            <Typography>{confirmState.message}</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => handleCloseConfirm(false)}>Cancel</Button>
+            <Button onClick={() => handleCloseConfirm(true)} color="error" variant="contained">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     </>
   );
