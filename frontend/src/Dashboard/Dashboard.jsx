@@ -1,9 +1,17 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../axiosConfig";
-import { Button, TextField, InputAdornment } from "@mui/material"; // Added InputAdornment
+import {
+  Button,
+  TextField,
+  InputAdornment,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  CircularProgress
+} from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import SearchIcon from "@mui/icons-material/Search"; // Added SearchIcon
+import SearchIcon from "@mui/icons-material/Search";
 import Navbar from "../Navbar/Navbar";
 import "./dashboard.css";
 
@@ -13,12 +21,9 @@ const deepSearch = (obj, word) => {
     const value = obj[key];
     if (value === null || value === undefined) continue;
 
-    // If it's an object or array, recurse
     if (typeof value === "object") {
       if (deepSearch(value, word)) return true;
-    }
-    // If it's a primitive, check it
-    else {
+    } else {
       if (String(value).toLowerCase().includes(word)) {
         return true;
       }
@@ -31,14 +36,57 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
-  const [totalJobs, setTotalJobs] = useState(0);
+  const [totalJobs, setTotalJobs] = useState(0); // Still needed for pagination logic
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [isPlanExpired, setIsPlanExpired] = useState(false);
 
+  // State for dynamic configuration
+  const [statusOptions, setStatusOptions] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
+
   const navigate = useNavigate();
   const token = sessionStorage.getItem("token");
 
+  // 1. Fetch User Configuration (Schema)
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchConfig = async () => {
+      try {
+        const res = await api.get("/user/get-config", {
+          headers: { authorization: `Bearer ${token}` },
+        });
+
+        if (res.status === 200 && res.data && res.data.schema) {
+          // Find the 'jobcard_status' field in the schema
+          const statusField = res.data.schema.find(
+            (field) => field.key === "jobcard_status"
+          );
+
+          if (statusField && statusField.options) {
+            setStatusOptions(statusField.options);
+
+            // Set default selected checkboxes based on schema
+            const defaults = statusField.options
+              .filter((opt) => opt.displayByDefault)
+              .map((opt) => opt.value);
+            
+            setSelectedStatuses(defaults);
+          }
+        }
+        setIsConfigLoaded(true);
+      } catch (err) {
+        console.error("Error fetching config:", err);
+        setIsConfigLoaded(true); 
+      }
+    };
+
+    fetchConfig();
+  }, [token]);
+
+  // 2. Fetch Jobs (Data)
   useEffect(() => {
     if (!token) {
       alert("You are not logged in. Please sign in.");
@@ -65,10 +113,8 @@ export default function Dashboard() {
         console.error("Error fetching initial data:", err);
 
         if (status === 401 && !isRetry) {
-          console.warn("Got 401, retrying after 0.5s...");
           setTimeout(() => fetchInitialData(true), 500);
         } else if (!isRetry) {
-          console.warn("Retrying fetch after 0.5s due to error...");
           setTimeout(() => fetchInitialData(true), 500);
         } else {
           navigate("/");
@@ -106,34 +152,52 @@ export default function Dashboard() {
     }
   };
 
+  // Handle checkbox toggle
+  const handleStatusChange = (value) => {
+    setSelectedStatuses((prev) => {
+      if (prev.includes(value)) {
+        return prev.filter((item) => item !== value);
+      } else {
+        return [...prev, value];
+      }
+    });
+  };
+
   const filteredJobs = useMemo(() => {
-    if (!searchTerm) {
-      return jobs; // No filter, return all fetched jobs
+    if (!isConfigLoaded) return [];
+
+    // 1. First filter by Job Status (Checkboxes)
+    let result = jobs.filter((job) =>
+      selectedStatuses.includes(job.jobcard_status)
+    );
+
+    // 2. Then filter by Search Term (if exists)
+    if (searchTerm) {
+      const searchWords = searchTerm
+        .toLowerCase()
+        .split(" ")
+        .filter((word) => word.length > 0);
+
+      result = result.filter((job) => {
+        return searchWords.some((word) => deepSearch(job, word));
+      });
     }
 
-    // Split search term into individual words, make lowercase
-    const searchWords = searchTerm
-      .toLowerCase()
-      .split(" ")
-      .filter((word) => word.length > 0);
-
-    return jobs.filter((job) => {
-      // Return true if *any* search word matches *any* field
-      return searchWords.some((word) => deepSearch(job, word));
-    });
-  }, [searchTerm, jobs]); // Re-filter when search or jobs change
+    return result;
+  }, [searchTerm, jobs, selectedStatuses, isConfigLoaded]);
 
   return (
     <div className="dashboard-container">
       <Navbar />
 
       <div className="job-summary-section">
+        {/* CHANGED: Showing filteredJobs.length instead of totalJobs */}
         <p className="job-summary">
-          Total Jobs: <b>{totalJobs}</b>
+          Displayed Jobs: <b>{filteredJobs.length}</b>
         </p>
 
         <TextField
-          label="Search Job Cards (e.g., Customer, Item, Job No)"
+          label="Search Job Cards"
           variant="outlined"
           size="small"
           className="dashboard-search"
@@ -160,61 +224,113 @@ export default function Dashboard() {
         </Button>
       </div>
 
+      {/* --- Dynamic Status Filter Section --- */}
+      <div className="status-filter-section" style={{ padding: "0 20px", marginBottom: "15px" }}>
+        {!isConfigLoaded ? (
+           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+             <CircularProgress size={20} /> <small>Loading filters...</small>
+           </div>
+        ) : (
+          <FormGroup row>
+            {statusOptions.map((option) => (
+              <FormControlLabel
+                key={option.value}
+                control={
+                  <Checkbox
+                    checked={selectedStatuses.includes(option.value)}
+                    onChange={() => handleStatusChange(option.value)}
+                    sx={{
+                      color: option.color || '#1976d2',
+                      '&.Mui-checked': {
+                        color: option.color || '#1976d2',
+                      },
+                    }}
+                  />
+                }
+                label={option.value}
+              />
+            ))}
+          </FormGroup>
+        )}
+      </div>
+
       <div className="job-cards">
         {filteredJobs.length > 0 ? (
-          filteredJobs.map((job) => (
-            <div key={job._id} className="job-card">
-              <h3>Job #{job.job_no || "-"}</h3>
-              <p>
-                <b>Customer:</b> {job.customer_name || "-"}
-              </p>
-              <p>
-                <b>Phone:</b> {job.customer_phone || "-"}
-              </p>
+          filteredJobs.map((job) => {
+            const statusConfig = statusOptions.find(o => o.value === job.jobcard_status);
+            const statusColor = statusConfig?.color || '#ccc';
 
-              <table className="items-table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {job.items && job.items.length > 0 ? (
-                    job.items.map((item, idx) => (
-                      <tr key={idx}>
-                        <td>
-                          {item.item_qty > 1
-                            ? `${item.item_name} (${item.item_qty})`
-                            : item.item_name}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td>-</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              <button
-                onClick={() => navigate(`/jobs/${job._id}`)}
-                className="view-btn"
+            return (
+              <div 
+                key={job._id} 
+                className="job-card" 
+                style={{ borderLeft: `5px solid ${statusColor}` }}
               >
-                View Details
-              </button>
-            </div>
-          ))
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <h3>Job #{job.job_no || "-"}</h3>
+                  <span className="badge" style={{
+                      backgroundColor: statusColor,
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.8rem'
+                  }}>
+                    {job.jobcard_status}
+                  </span>
+                </div>
+                
+                <p>
+                  <b>Customer:</b> {job.customer_name || "-"}
+                </p>
+                <p>
+                  <b>Phone:</b> {job.customer_phone || "-"}
+                </p>
+
+                <table className="items-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {job.items && job.items.length > 0 ? (
+                      job.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            {item.item_qty > 1
+                              ? `${item.item_name} (${item.item_qty})`
+                              : item.item_name}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td>-</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                <button
+                  onClick={() => navigate(`/jobs/${job._id}`)}
+                  className="view-btn"
+                >
+                  View Details
+                </button>
+              </div>
+            );
+          })
         ) : (
           <p className="no-jobs">
             {jobs.length === 0 && !loading
               ? "No jobs found."
-              : "No jobs match your search."}
+              : "No jobs match your search or selected filters."}
           </p>
         )}
       </div>
 
       <div className="pagination">
+        {/* Pagination button logic remains based on totalJobs vs loaded jobs */}
         {hasMore && !loading && !searchTerm && (
           <button onClick={() => fetchJobs(page + 1)} className="load-more-btn">
             Load More
