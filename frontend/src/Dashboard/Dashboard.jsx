@@ -93,7 +93,7 @@ export default function Dashboard() {
 
   // 1. Fetch User Configuration (Schema)
   useEffect(() => {
-    if (!token) return; // wait until token is available
+    if (!token) return;
 
     const fetchConfig = async () => {
       try {
@@ -102,19 +102,16 @@ export default function Dashboard() {
             api.get("/user/get-config", {
               headers: { authorization: `Bearer ${token}` },
             }),
-          5000 // 5 seconds timeout window
+          5000 
         );
 
         if (res.status === 200 && res.data && res.data.schema) {
-          // Find the 'jobcard_status' field in the schema
           const statusField = res.data.schema.find(
             (field) => field.key === "jobcard_status"
           );
 
           if (statusField && statusField.options) {
             setStatusOptions(statusField.options);
-
-            // Set default selected checkboxes based on schema
             const defaults = statusField.options
               .filter((opt) => opt.displayByDefault)
               .map((opt) => opt.value);
@@ -124,6 +121,8 @@ export default function Dashboard() {
         }
       } catch (err) {
         console.error("Error fetching config (even after retry):", err);
+        // ADDED ALERT HERE
+        alert("Timeout loading configuration data. Please check your connection or try again.");
       } finally {
         setIsConfigLoaded(true);
       }
@@ -134,7 +133,7 @@ export default function Dashboard() {
 
   // 2. Fetch Jobs (Data)
   useEffect(() => {
-    if (!token) return; // don't call APIs until token is set
+    if (!token) return; 
 
     const fetchInitialData = async () => {
       try {
@@ -143,19 +142,24 @@ export default function Dashboard() {
             api.get("/user/jobs/count", {
               headers: { authorization: `Bearer ${token}` },
             }),
-          5000 // 5s retry window
+          5000 
         );
 
         if (countRes.data?.total !== undefined) {
           setTotalJobs(countRes.data.total);
           if (countRes.data.total > 0) {
+            // Note: Ensure fetchJobs also handles its own errors or is awaited properly
             await fetchJobs(0, token);
           }
         }
       } catch (err) {
         console.error("Error fetching initial data (even after retry):", err);
-        // If after retries it's still failing, you can choose to navigate out:
-        // navigate("/");
+        
+        // ADDED ALERT HERE
+        alert("Timeout loading job data. The server might be busy. Please refresh the page.");
+        
+        // Optional: Redirect to login if data load fails completely
+        // navigate("/"); 
       }
     };
 
