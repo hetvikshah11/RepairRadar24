@@ -45,7 +45,7 @@ router.post('/signup', async (req, res) => {
       password: hashedPassword,
       validity: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days free validity in milliseconds
       dbUrl: DEFAULT_USER_DB_URL,
-      schemaConfigured: false
+      schemaConfigured: true
     });
 
     res.status(201).json({
