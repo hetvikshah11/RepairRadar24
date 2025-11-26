@@ -15,14 +15,14 @@ import {
   Modal,
   Box,
   Typography,
-  Checkbox, // 🟢 NEW
+  Checkbox,
   List,
 } from "@mui/material";
 import {
   AddCircle,
   Delete,
   WhatsApp
-} from "@mui/icons-material"; // 🟢 NEW
+} from "@mui/icons-material";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -223,7 +223,7 @@ export default function JobCardDetails() {
           newErrors[`item_${idx}_name`] = "Item name is required";
         }
         (item.parts || []).forEach((part, pIdx) => {
-          if (!part.name?.trim()) {
+          if (part.name !== undefined && !part.name?.trim()) {
             newErrors[`item_${idx}_part_${pIdx}_name`] = "Part name is required";
           }
         });
@@ -260,7 +260,7 @@ export default function JobCardDetails() {
     const rowParts = updated[activeParts.rowIndex].parts || [];
 
     for (let p of rowParts) {
-      if (!p.name?.trim()) {
+      if (p.name !== undefined && !p.name?.trim()) {
         setPartsErrors("Part name cannot be empty.");
         toast.warn("Part name cannot be empty.");
         return;
@@ -269,7 +269,8 @@ export default function JobCardDetails() {
 
     updated[activeParts.rowIndex].parts = rowParts.map((p) => ({
       ...p,
-      price: p.price === "" || p.price == null ? 0 : p.price,
+      qty: p.qty === "" || p.qty == null ? 1 : Number(p.qty),
+      price: p.price === "" || p.price == null ? 0 : Number(p.price),
     }));
 
     setFormData((prev) => ({
@@ -412,6 +413,19 @@ export default function JobCardDetails() {
       .trim();
   }
 
+  // --- DYNAMIC PARTS SCHEMA RETRIEVAL ---
+  const getPartsSchema = () => {
+    if (!activeParts) return [];
+    // 1. Find the parent field (e.g., 'items')
+    const parentField = schema.find((f) => f.key === activeParts.parentKey);
+    // 2. Find the 'parts' field inside the parent's fields
+    const partsField = parentField?.fields?.find((f) => f.key === "parts");
+    // 3. Return the fields defined inside 'parts'
+    return partsField?.fields || [];
+  };
+
+  const partsFields = getPartsSchema();
+
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
@@ -503,12 +517,6 @@ export default function JobCardDetails() {
                                     row[sub.key],
                                     (val) => handleListChange(field.key, rowIndex, sub.key, val)
                                   )
-                                )}
-
-                                {sub.key === "item_qty" && errors[`item_${rowIndex}_qty`] && (
-                                  <span className="error-text">
-                                    {errors[`item_${rowIndex}_qty`]}
-                                  </span>
                                 )}
                               </TableCell>
                             ))}
@@ -649,7 +657,7 @@ export default function JobCardDetails() {
           </Box>
         </Modal>
 
-        {/* Parts Modal */}
+        {/* --- DYNAMIC PARTS MODAL --- */}
         <Modal open={!!activeParts} onClose={() => setActiveParts(null)}>
           <Box className="modal-box">
             <Typography variant="h6">Parts</Typography>
@@ -659,9 +667,10 @@ export default function JobCardDetails() {
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Part Name</TableCell>
-                        <TableCell>Qty</TableCell>
-                        <TableCell>Price</TableCell>
+                        {/* 1. Dynamic Headers */}
+                        {partsFields.map((f) => (
+                           <TableCell key={f.key}>{f.name}</TableCell>
+                        ))}
                         <TableCell>Action</TableCell>
                       </TableRow>
                     </TableHead>
@@ -670,86 +679,58 @@ export default function JobCardDetails() {
                       {(formData[activeParts.parentKey]?.[activeParts.rowIndex].parts || []).map(
                         (p, idx) => (
                           <TableRow key={idx}>
-                            {/* Part Name */}
-                            <TableCell>
-                              <Autocomplete
-                                freeSolo
-                                options={savedParts.map((part) => part.part_name)}
-                                value={p.name || ""}
-                                onInputChange={(_, newValue) => {
-                                  const newPartName = newValue || "";
+                             {/* 2. Dynamic Body Cells */}
+                             {partsFields.map((f) => (
+                               <TableCell key={f.key} style={{ minWidth: f.key === 'name' ? 200 : 100}}>
+                                  {(f.key === "name" || f.key === "part_name") ? (
+                                    // SPECIAL CASE: Autocomplete for Part Name
+                                    <Autocomplete
+                                      freeSolo
+                                      options={savedParts.map((part) => part.part_name)}
+                                      value={p[f.key] || ""}
+                                      onInputChange={(_, newValue) => {
+                                        const newPartName = newValue || "";
+                                        const foundPart = savedParts.find(
+                                          (sp) => sp.part_name === newPartName
+                                        );
 
-                                  const foundPart = savedParts.find(
-                                    (sp) => sp.part_name === newPartName
-                                  );
+                                        const updated = [...formData[activeParts.parentKey]];
+                                        const currentPart = updated[activeParts.rowIndex].parts[idx];
+                                        currentPart[f.key] = newPartName; // Set name
 
-                                  const updated = [...formData[activeParts.parentKey]];
-                                  const currentPart = updated[activeParts.rowIndex].parts[idx];
+                                        // Auto-fill price if found
+                                        if (foundPart && currentPart.price !== undefined) {
+                                          currentPart.price = foundPart.part_price;
+                                        }
 
-                                  currentPart.name = newPartName;
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          [activeParts.parentKey]: updated,
+                                        }));
+                                      }}
+                                      renderInput={(params) => (
+                                        <TextField
+                                          {...params}
+                                          size="small"
+                                          label={f.name}
+                                          error={!!errors[`item_${activeParts.rowIndex}_part_${idx}_name`]}
+                                        />
+                                      )}
+                                    />
+                                  ) : (
+                                    // GENERIC CASE: Use Simple Field
+                                    renderSimpleField(f, p[f.key], (val) => {
+                                      const updated = [...formData[activeParts.parentKey]];
+                                      updated[activeParts.rowIndex].parts[idx][f.key] = val;
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        [activeParts.parentKey]: updated,
+                                      }));
+                                    })
+                                  )}
+                               </TableCell>
+                             ))}
 
-                                  if (foundPart) {
-                                    currentPart.price = foundPart.part_price;
-                                  }
-
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    [activeParts.parentKey]: updated,
-                                  }));
-                                }}
-                                renderInput={(params) => (
-                                  <TextField
-                                    {...params}
-                                    size="small"
-                                    label="Part Name"
-                                    error={!!errors[`item_${activeParts.rowIndex}_part_${idx}_name`]}
-                                    helperText={errors[`item_${activeParts.rowIndex}_part_${idx}_name`]}
-                                  />
-                                )}
-                              />
-                            </TableCell>
-
-                            {/* Qty */}
-                            <TableCell>
-                              <TextField
-                                type="number"
-                                value={p.qty || 1}
-                                onChange={(e) => {
-                                  const updated = [...formData[activeParts.parentKey]];
-                                  updated[activeParts.rowIndex].parts[idx] = {
-                                    ...p,
-                                    qty: e.target.value,
-                                  };
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    [activeParts.parentKey]: updated,
-                                  }));
-                                }}
-                                size="small"
-                              />
-                            </TableCell>
-
-                            {/* Price */}
-                            <TableCell>
-                              <TextField
-                                type="number"
-                                value={p.price == null ? "" : p.price}
-                                onChange={(e) => {
-                                  const updated = [...formData[activeParts.parentKey]];
-                                  updated[activeParts.rowIndex].parts[idx] = {
-                                    ...p,
-                                    price: e.target.value,
-                                  };
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    [activeParts.parentKey]: updated,
-                                  }));
-                                }}
-                                size="small"
-                              />
-                            </TableCell>
-
-                            {/* Delete */}
                             <TableCell>
                               <IconButton
                                 color="error"
@@ -776,15 +757,24 @@ export default function JobCardDetails() {
                   </Table>
                 </Paper>
                 {partsErrors && <span className="error-text">{partsErrors}</span>}
+                
+                {/* 3. Dynamic Add Part Button */}
                 <Button
                   startIcon={<AddCircle />}
                   onClick={() => {
+                    // Generate new row based on schema
+                    const newPartRow = {};
+                    partsFields.forEach((f) => {
+                         if (f.key.toLowerCase().includes("qty")) newPartRow[f.key] = 1;
+                         else if (f.key.toLowerCase().includes("price")) newPartRow[f.key] = 0;
+                         else if (f.type === "checkbox") newPartRow[f.key] = false;
+                         else newPartRow[f.key] = "";
+                    });
+
                     const updated = [...formData[activeParts.parentKey]];
                     const currentParts = updated[activeParts.rowIndex].parts || [];
-                    updated[activeParts.rowIndex].parts = [
-                      ...currentParts,
-                      { name: "", qty: 1, price: 0 },
-                    ];
+                    updated[activeParts.rowIndex].parts = [...currentParts, newPartRow];
+                    
                     setFormData((prev) => ({
                       ...prev,
                       [activeParts.parentKey]: updated,
@@ -804,7 +794,7 @@ export default function JobCardDetails() {
           </Box>
         </Modal>
 
-        {/* Confirm dialog (replaces window.confirm usage) */}
+        {/* Confirm dialog */}
         <Dialog open={confirmState.open} onClose={() => handleCloseConfirm(false)}>
           <DialogTitle>Confirm</DialogTitle>
           <DialogContent>
