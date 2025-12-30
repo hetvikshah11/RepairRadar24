@@ -36,7 +36,7 @@ router.post('/signup', async (req, res) => {
       email,
       password: hashedPassword,
       validity: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days free
-      schemaConfigured: true,
+      schemaConfigured: false,
       createdAt: new Date()
     });
 

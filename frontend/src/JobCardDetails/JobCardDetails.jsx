@@ -55,7 +55,6 @@ export default function JobCardDetails() {
     resolver: null,
   });
 
-  // askConfirm returns a Promise<boolean>
   const askConfirm = (message) =>
     new Promise((resolve) => {
       setConfirmState({ open: true, message, resolver: resolve });
@@ -66,7 +65,6 @@ export default function JobCardDetails() {
     setConfirmState({ open: false, message: "", resolver: null });
   };
 
-  // ✅ Fetch schema + job data
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     if (!token) {
@@ -83,7 +81,6 @@ export default function JobCardDetails() {
     ])
       .then(([schemaRes, jobRes, itemRes, partsRes]) => {
         if (schemaRes.data?.schema) {
-          console.log("Schema fetched:", schemaRes.data.schema);
           setSchema(schemaRes.data.schema);
         }
         if (jobRes.data?.job) setFormData(jobRes.data.job);
@@ -98,7 +95,6 @@ export default function JobCardDetails() {
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
-  // 🟢 Fetch WhatsApp messages
   const fetchWhatsappMessages = async () => {
     try {
       const token = sessionStorage.getItem("token");
@@ -146,8 +142,9 @@ export default function JobCardDetails() {
   const calculateRepairCost = (parts = []) =>
     parts.reduce((sum, p) => sum + (parseFloat(p.qty) || 0) * (parseFloat(p.price) || 0), 0);
 
-  const renderSimpleField = (field, value, onChange) => {
+  const renderSimpleField = (field, value, onChange, isTable = false) => {
     const isJobNo = field.key === "job_no";
+    const marginType = isTable ? "none" : "normal"; 
 
     switch (field.type) {
       case "text":
@@ -160,7 +157,7 @@ export default function JobCardDetails() {
             value={value || ""}
             onChange={(e) => onChange(e.target.value)}
             fullWidth
-            margin="normal"
+            margin={marginType} 
             size="small"
             error={!!errors[field.key]}
             helperText={errors[field.key]}
@@ -183,7 +180,7 @@ export default function JobCardDetails() {
               onChange(newVal ? newVal.value : field.options[0]?.value || "")
             }
             renderInput={(params) => (
-              <TextField {...params} label={field.name} margin="normal" fullWidth size="small" />
+              <TextField {...params} label={field.name} margin={marginType} fullWidth size="small" />
             )}
             disabled={isJobNo}
           />
@@ -202,7 +199,6 @@ export default function JobCardDetails() {
     }
   };
 
-  // ✅ Validation before save
   const validateForm = () => {
     const newErrors = {};
 
@@ -234,7 +230,6 @@ export default function JobCardDetails() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ Save job
   const handleSave = async () => {
     if (!validateForm()) {
       toast.error("Please fix validation errors before saving.");
@@ -254,7 +249,6 @@ export default function JobCardDetails() {
     }
   };
 
-  // ✅ Parts Modal validation before closing
   const handlePartsDone = () => {
     const updated = [...formData[activeParts.parentKey]];
     const rowParts = updated[activeParts.rowIndex].parts || [];
@@ -282,59 +276,19 @@ export default function JobCardDetails() {
     setActiveParts(null);
   };
 
-  // 🟢 Toggle item selection for WhatsApp
   const toggleWhatsappItem = (index) => {
     setWhatsappItems((prev) => {
       const exists = prev.includes(index);
       if (exists) {
-        // Remove index if already selected
         return prev.filter((i) => i !== index);
       }
-      // Add index if not already selected
       return [...prev, index];
     });
   };
 
-  // Helper to recursively search schema for a field
-  const findFieldPath = (schema, fieldKey, currentPath = []) => {
-    for (const field of schema) {
-      if (field.key === fieldKey) return [...currentPath, field.key];
-      if (field.type === "list" && Array.isArray(field.fields)) {
-        const nested = findFieldPath(field.fields, fieldKey, [...currentPath, field.key]);
-        if (nested) return nested;
-      }
-    }
-    return null;
-  };
-
-  // Helper to safely extract value by following a path (handles arrays)
-  const extractValueByPath = (data, path) => {
-    let value = data;
-    for (const key of path) {
-      if (value == null) return "";
-      value = value[key];
-    }
-
-    if (Array.isArray(value)) {
-      // if array of objects with item_name etc.
-      if (value.length && typeof value[0] === "object") {
-        // pick all text-like values
-        const textValues = value
-          .map((obj) => Object.values(obj).find((v) => typeof v === "string"))
-          .filter(Boolean);
-        return textValues.join(", ");
-      }
-      return value.join(", ");
-    }
-
-    return value ?? "";
-  };
-
-  // ✅ Main message generator
   function generateWhatsappMessage(template, formData, selectedIndices = []) {
     if (!template || !formData) return "";
 
-    // Helper to safely fetch nested formData values
     const getValueFromFormData = (key) => {
       if (!formData || !key) return "";
       const parts = key.split(".");
@@ -349,14 +303,12 @@ export default function JobCardDetails() {
       return value ?? "";
     };
 
-    let message = template.replace(/\\n/g, "\n"); // convert stored "\n" to real newlines
+    let message = template.replace(/\\n/g, "\n");
 
-    // ✅ Detect list-type fields (like items)
     if (Array.isArray(formData.items) && formData.items.length > 0) {
       const itemKeys = Object.keys(formData.items[0]);
       const lines = message.split(/\r?\n/);
 
-      // Find the first and last line that reference item fields
       const firstItemLine = lines.findIndex((line) =>
         itemKeys.some((key) => line.includes(`{${key}}`))
       );
@@ -369,7 +321,6 @@ export default function JobCardDetails() {
       const lastIndex = lastItemLine >= 0 ? lines.length - 1 - lastItemLine : firstItemLine;
 
       if (firstItemLine !== -1) {
-        // The part that should be repeated (could be multiple lines)
         const itemTemplate = lines.slice(firstItemLine, lastIndex + 1).join("\n");
 
         const selectedItems =
@@ -377,7 +328,6 @@ export default function JobCardDetails() {
             ? formData.items.filter((_, idx) => selectedIndices.includes(idx))
             : formData.items;
 
-        // Generate the repeated section
         const itemsSection = selectedItems
           .map((item) =>
             itemTemplate.replace(/\{(.*?)\}/g, (_, key) => {
@@ -393,34 +343,27 @@ export default function JobCardDetails() {
           )
           .join("\n");
 
-        // Replace the original item lines with the repeated section
         lines.splice(firstItemLine, lastIndex - firstItemLine + 1, itemsSection);
         message = lines.join("\n");
       }
     }
 
-    // ✅ Replace remaining placeholders (outside item list)
     message = message.replace(/\{(.*?)\}/g, (_, key) => {
       const val = getValueFromFormData(key);
       return val || "";
     });
 
-    // ✅ Cleanup & return
     return message
       .replace(/(\(|\[|\{|\<)\s*(\)|\]|\}|\>)/g, "")
       .replace(/\s+\n/g, "\n")
-      .replace(/\n{3,}/g, "\n\n") // normalize excessive blank lines
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
   }
 
-  // --- DYNAMIC PARTS SCHEMA RETRIEVAL ---
   const getPartsSchema = () => {
     if (!activeParts) return [];
-    // 1. Find the parent field (e.g., 'items')
     const parentField = schema.find((f) => f.key === activeParts.parentKey);
-    // 2. Find the 'parts' field inside the parent's fields
     const partsField = parentField?.fields?.find((f) => f.key === "parts");
-    // 3. Return the fields defined inside 'parts'
     return partsField?.fields || [];
   };
 
@@ -454,19 +397,38 @@ export default function JobCardDetails() {
           .map((field) => (
             <div key={field.key} className="list-wrapper">
               <h4>{field.name}</h4>
-              <Paper className="list-table">
-                <Table>
+              <Paper className="list-table" sx={{ overflowX: "auto" }}>
+                <Table sx={{ minWidth: 800 }}> 
                   <TableHead>
                     <TableRow>
                       {field.fields
                         .filter((f) => f.type !== "list")
-                        .map((sub) => (
-                          <TableCell key={sub.key}>{sub.name}</TableCell>
-                        ))}
-                      <TableCell>Repair Cost</TableCell>
-                      <TableCell>Parts</TableCell>
-                      <TableCell>WhatsApp</TableCell> {/* 🟢 NEW */}
-                      <TableCell>Action</TableCell>
+                        .map((sub) => {
+                          const lowerKey = sub.key.toLowerCase();
+                          let style = { whiteSpace: "nowrap" };
+
+                          if (lowerKey.includes("qty")) {
+                            style.width = "120px"; 
+                          } else if (lowerKey.includes("price") || lowerKey.includes("cost")) {
+                            style.width = "100px";
+                          } else if (sub.key === "item_name") {
+                            style.minWidth = "250px"; 
+                          } else if (sub.type === "dropdown" || sub.key === "item_status" || sub.key === "unique_id") {
+                            style.minWidth = "200px"; 
+                          } else {
+                            style.minWidth = "120px"; 
+                          }
+
+                          return (
+                            <TableCell key={sub.key} style={style}>
+                              {sub.name}
+                            </TableCell>
+                          );
+                        })}
+                      <TableCell style={{ width: "120px" }}>Repair Cost</TableCell>
+                      <TableCell style={{ width: "100px" }}>Parts</TableCell>
+                      <TableCell style={{ width: "80px" }}>WhatsApp</TableCell>
+                      <TableCell style={{ width: "80px" }}>Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -490,7 +452,7 @@ export default function JobCardDetails() {
                           {field.fields
                             .filter((f) => f.type !== "list")
                             .map((sub) => (
-                              <TableCell key={sub.key}>
+                              <TableCell key={sub.key} style={{ verticalAlign: "middle" }}>
                                 {sub.key === "item_name" ? (
                                   <Autocomplete
                                     freeSolo
@@ -503,7 +465,7 @@ export default function JobCardDetails() {
                                       <TextField
                                         {...params}
                                         label={sub.name}
-                                        margin="normal"
+                                        margin="none"
                                         fullWidth
                                         size="small"
                                         error={!!errors[`item_${rowIndex}_name`]}
@@ -515,7 +477,8 @@ export default function JobCardDetails() {
                                   renderSimpleField(
                                     sub,
                                     row[sub.key],
-                                    (val) => handleListChange(field.key, rowIndex, sub.key, val)
+                                    (val) => handleListChange(field.key, rowIndex, sub.key, val),
+                                    true
                                   )
                                 )}
                               </TableCell>
@@ -563,13 +526,11 @@ export default function JobCardDetails() {
             </div>
           ))}
 
-        {/* Action Buttons */}
         <div className="action-buttons">
           <Button variant="contained" color="primary" onClick={handleSave} className="save-btn">
             Save Changes
           </Button>
 
-          {/* 🟢 WhatsApp Button */}
           <Button
             disabled={whatsappItems.length === 0}
             variant="contained"
@@ -593,7 +554,6 @@ export default function JobCardDetails() {
           </Button>
         </div>
 
-        {/* WhatsApp Modal 🟢 */}
         <Modal open={whatsappModalOpen} onClose={() => setWhatsappModalOpen(false)}>
           <Box className="modal-box">
             <Typography variant="h6" gutterBottom>
@@ -619,10 +579,8 @@ export default function JobCardDetails() {
                       const finalMessage = generateWhatsappMessage(rawTemplate, formData, whatsappItems);
                       try {
                         await navigator.clipboard.writeText(finalMessage);
-                        console.log("WhatsApp message copied to clipboard!");
                         toast.success("Message copied to clipboard.");
                       } catch (err) {
-                        console.error("Failed to copy message:", err);
                         toast.warn("Failed to copy to clipboard — opening WhatsApp link instead.");
                       }
 
@@ -663,14 +621,26 @@ export default function JobCardDetails() {
             <Typography variant="h6">Parts</Typography>
             {activeParts && (
               <>
-                <Paper className="list-table">
-                  <Table>
+                <Paper className="list-table" sx={{ overflowX: "auto" }}> {/* 🟢 Added overflowX */}
+                  <Table sx={{ minWidth: 600 }}> {/* 🟢 Added minWidth for parts table */}
                     <TableHead>
                       <TableRow>
-                        {/* 1. Dynamic Headers */}
-                        {partsFields.map((f) => (
-                           <TableCell key={f.key}>{f.name}</TableCell>
-                        ))}
+                        {/* 🟢 DYNAMIC WIDTHS FOR PARTS HEADER */}
+                        {partsFields.map((f) => {
+                          const lowerKey = f.key.toLowerCase();
+                          let style = { whiteSpace: "nowrap" };
+
+                          if (lowerKey.includes("qty")) {
+                            style.width = "150px"; 
+                          } else if (lowerKey.includes("price") || lowerKey.includes("cost")) {
+                            style.width = "180px";
+                          } else if (f.key === "name" || f.key === "part_name") {
+                            style.minWidth = "250px"; 
+                          } else {
+                            // style.minWidth = "120px"; 
+                          }
+                          return <TableCell key={f.key} style={style}>{f.name}</TableCell>;
+                        })}
                         <TableCell>Action</TableCell>
                       </TableRow>
                     </TableHead>
@@ -679,58 +649,53 @@ export default function JobCardDetails() {
                       {(formData[activeParts.parentKey]?.[activeParts.rowIndex].parts || []).map(
                         (p, idx) => (
                           <TableRow key={idx}>
-                             {/* 2. Dynamic Body Cells */}
-                             {partsFields.map((f) => (
-                               <TableCell key={f.key} style={{ minWidth: f.key === 'name' ? 200 : 100}}>
-                                  {(f.key === "name" || f.key === "part_name") ? (
-                                    // SPECIAL CASE: Autocomplete for Part Name
-                                    <Autocomplete
-                                      freeSolo
-                                      options={savedParts.map((part) => part.part_name)}
-                                      value={p[f.key] || ""}
-                                      onInputChange={(_, newValue) => {
-                                        const newPartName = newValue || "";
-                                        const foundPart = savedParts.find(
-                                          (sp) => sp.part_name === newPartName
-                                        );
+                            {partsFields.map((f) => (
+                              <TableCell key={f.key} style={{ verticalAlign: "middle" }}>
+                                {(f.key === "name" || f.key === "part_name") ? (
+                                  <Autocomplete
+                                    freeSolo
+                                    options={savedParts.map((part) => part.part_name)}
+                                    value={p[f.key] || ""}
+                                    onInputChange={(_, newValue) => {
+                                      const newPartName = newValue || "";
+                                      const foundPart = savedParts.find(
+                                        (sp) => sp.part_name === newPartName
+                                      );
 
-                                        const updated = [...formData[activeParts.parentKey]];
-                                        const currentPart = updated[activeParts.rowIndex].parts[idx];
-                                        currentPart[f.key] = newPartName; // Set name
-
-                                        // Auto-fill price if found
-                                        if (foundPart && currentPart.price !== undefined) {
-                                          currentPart.price = foundPart.part_price;
-                                        }
-
-                                        setFormData((prev) => ({
-                                          ...prev,
-                                          [activeParts.parentKey]: updated,
-                                        }));
-                                      }}
-                                      renderInput={(params) => (
-                                        <TextField
-                                          {...params}
-                                          size="small"
-                                          label={f.name}
-                                          error={!!errors[`item_${activeParts.rowIndex}_part_${idx}_name`]}
-                                        />
-                                      )}
-                                    />
-                                  ) : (
-                                    // GENERIC CASE: Use Simple Field
-                                    renderSimpleField(f, p[f.key], (val) => {
                                       const updated = [...formData[activeParts.parentKey]];
-                                      updated[activeParts.rowIndex].parts[idx][f.key] = val;
+                                      const currentPart = updated[activeParts.rowIndex].parts[idx];
+                                      currentPart[f.key] = newPartName;
+                                      if (foundPart && currentPart.price !== undefined) {
+                                        currentPart.price = foundPart.part_price;
+                                      }
+
                                       setFormData((prev) => ({
                                         ...prev,
                                         [activeParts.parentKey]: updated,
                                       }));
-                                    })
-                                  )}
-                               </TableCell>
-                             ))}
-
+                                    }}
+                                    renderInput={(params) => (
+                                      <TextField
+                                        {...params}
+                                        size="small"
+                                        margin="none"
+                                        label={f.name}
+                                        error={!!errors[`item_${activeParts.rowIndex}_part_${idx}_name`]}
+                                      />
+                                    )}
+                                  />
+                                ) : (
+                                  renderSimpleField(f, p[f.key], (val) => {
+                                    const updated = [...formData[activeParts.parentKey]];
+                                    updated[activeParts.rowIndex].parts[idx][f.key] = val;
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      [activeParts.parentKey]: updated,
+                                    }));
+                                  }, true)
+                                )}
+                              </TableCell>
+                            ))}
                             <TableCell>
                               <IconButton
                                 color="error"
@@ -757,24 +722,22 @@ export default function JobCardDetails() {
                   </Table>
                 </Paper>
                 {partsErrors && <span className="error-text">{partsErrors}</span>}
-                
-                {/* 3. Dynamic Add Part Button */}
+
                 <Button
                   startIcon={<AddCircle />}
                   onClick={() => {
-                    // Generate new row based on schema
                     const newPartRow = {};
                     partsFields.forEach((f) => {
-                         if (f.key.toLowerCase().includes("qty")) newPartRow[f.key] = 1;
-                         else if (f.key.toLowerCase().includes("price")) newPartRow[f.key] = 0;
-                         else if (f.type === "checkbox") newPartRow[f.key] = false;
-                         else newPartRow[f.key] = "";
+                      if (f.key.toLowerCase().includes("qty")) newPartRow[f.key] = 1;
+                      else if (f.key.toLowerCase().includes("price")) newPartRow[f.key] = 0;
+                      else if (f.type === "checkbox") newPartRow[f.key] = false;
+                      else newPartRow[f.key] = "";
                     });
 
                     const updated = [...formData[activeParts.parentKey]];
                     const currentParts = updated[activeParts.rowIndex].parts || [];
                     updated[activeParts.rowIndex].parts = [...currentParts, newPartRow];
-                    
+
                     setFormData((prev) => ({
                       ...prev,
                       [activeParts.parentKey]: updated,
@@ -794,7 +757,6 @@ export default function JobCardDetails() {
           </Box>
         </Modal>
 
-        {/* Confirm dialog */}
         <Dialog open={confirmState.open} onClose={() => handleCloseConfirm(false)}>
           <DialogTitle>Confirm</DialogTitle>
           <DialogContent>
