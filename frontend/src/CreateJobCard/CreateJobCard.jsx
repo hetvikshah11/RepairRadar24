@@ -241,8 +241,8 @@ export default function CreateJobCard() {
     }, 0);
   };
 
-  // 🔴 UPDATED: Accepts isTable param to remove vertical margins in tables
-  const renderSimpleField = (field, value, onChange, isTable = false) => {
+  // 🔴 UPDATED: Accepts customSx as the 5th argument
+  const renderSimpleField = (field, value, onChange, isTable = false, customSx = {}) => {
     const marginType = isTable ? "none" : "normal";
 
     switch (field.type) {
@@ -256,10 +256,11 @@ export default function CreateJobCard() {
             value={value === undefined || value === null ? "" : value}
             onChange={(e) => onChange(e.target.value)}
             fullWidth
-            margin={marginType} // Dynamic margin
+            margin={marginType}
             size="small"
             InputLabelProps={field.type === "date" ? { shrink: true } : {}}
             disabled={isPlanExpired}
+            sx={customSx} // 👈 Added here
           />
         );
 
@@ -278,11 +279,12 @@ export default function CreateJobCard() {
               onChange(newVal ? newVal.value : field.options[0]?.value || "")
             }
             disabled={isPlanExpired}
+            sx={customSx} // 👈 Added here (fixes the width issue)
             renderInput={(params) => (
               <TextField
                 {...params}
                 label={field.name}
-                margin={marginType} // Dynamic margin
+                margin={marginType}
                 fullWidth
                 size="small"
               />
@@ -308,12 +310,15 @@ export default function CreateJobCard() {
   };
 
   const handleCustomerNameChange = (event, value) => {
+    const upperValue = (value || "").toUpperCase();
+
     const found = customerDetails.find(
-      (c) => c.customer_name.toLowerCase() === (value || "").toLowerCase()
+      (c) => c.customer_name.toLowerCase() === upperValue.toLowerCase()
     );
 
     setFormData((prev) => {
-      let updated = { ...prev, customer_name: value || "" };
+      let updated = { ...prev, customer_name: upperValue };
+      
       if (found && !prev.customer_phone) {
         updated.customer_phone = found.customer_phone;
       }
@@ -328,7 +333,7 @@ export default function CreateJobCard() {
       if (phone.length === 10 && !prev.customer_name) {
         const found = customerDetails.find((c) => c.customer_phone === phone);
         if (found) {
-          updated.customer_name = found.customer_name;
+          updated.customer_name = found.customer_name.toUpperCase();
         }
       }
       return updated;
@@ -494,6 +499,7 @@ export default function CreateJobCard() {
             <Grid item xs={12} md={4}>
               <Autocomplete
                 freeSolo
+                sx={{ minWidth: 250 }}
                 options={customerDetails.map((c) => c.customer_name)}
                 value={formData.customer_name || ""}
                 onInputChange={handleCustomerNameChange}
@@ -516,7 +522,9 @@ export default function CreateJobCard() {
                 renderSimpleField(
                   statusField,
                   formData[statusField.key],
-                  (val) => handleChange(statusField.key, val)
+                  (val) => handleChange(statusField.key, val),
+                  false,
+                  { minWidth: 250 } // 👈 Custom sx to fix width
                 )}
             </Grid>
           </Grid>

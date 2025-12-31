@@ -167,13 +167,27 @@ router.post("/jobs/savejobcard",
       const newJob = req.body;
       newJob.uid = userId;
 
-      const lastJob = await jobsCollection.findOne(
-        { uid: userId },
-        { sort: { job_no: -1 } }
-      );
-      const nextJobNo = lastJob ? lastJob.job_no + 1 : 1;
+      const lastJobCursor = await jobsCollection.aggregate([
+        { $match: { uid: userId } },
+        { 
+          $addFields: { 
+            convertedJobNo: { $toInt: "$job_no" } 
+          } 
+        },
+        { $sort: { convertedJobNo: -1 } },
+        { $limit: 1 }
+      ]).toArray();
 
-      newJob.job_no = nextJobNo;
+      const lastJob = lastJobCursor.length > 0 ? lastJobCursor[0] : null;
+
+      let nextJobNo;
+      if (lastJob) {
+        nextJobNo = parseInt(lastJob.job_no) + 1; 
+      } else {
+        nextJobNo = 1;
+      }
+
+      newJob.job_no = String(nextJobNo); 
       newJob.createdAt = new Date();
 
       await jobsCollection.insertOne(newJob);
@@ -181,7 +195,7 @@ router.post("/jobs/savejobcard",
       res.json({
         success: true,
         message: "Job saved successfully",
-        job_no: nextJobNo,
+        job_no: newJob.job_no,
       });
 
       upsertCustomerInBackground(
