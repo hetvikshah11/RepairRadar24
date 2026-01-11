@@ -87,16 +87,29 @@ router.get("/jobs/getjobcards", authenticateAndAttachDb, async (req, res) => {
     let limit = parseInt(req.query.limit) || 20;
     let offset = parseInt(req.query.offset) || 0;
 
+    const pipeline = [
+      { $match: { uid: userId } },
+      // 2. Add a temporary field 'sortDate' that converts 'createdAt' to a Date Object
+      //    $toDate handles both existing Date objects and Strings like "2025-12-31"
+      { 
+        $addFields: { 
+          sortDate: { $toDate: "$createdAt" } 
+        }
+      },
+      { $sort: { sortDate: -1 } },
+      { $skip: offset },
+      { $limit: limit },
+      // remove extra sortDate field
+      { $project: { sortDate: 0 } }
+    ];
+
     const jobs = await req.db
       .collection("jobs")
-      .find({ uid: userId })
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit)
+      .aggregate(pipeline)
       .toArray();
 
+    // Count stays the same (filters don't change)
     const total = await req.db.collection("jobs").countDocuments({ uid: userId });
-
     const hasMore = offset + jobs.length < total;
 
     res.json({
