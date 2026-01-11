@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../axiosConfig";
 import {
@@ -15,7 +15,11 @@ import SearchIcon from "@mui/icons-material/Search";
 import Navbar from "../Navbar/Navbar";
 import "./dashboard.css";
 
-// Helper function to recursively search for a word in an object
+// --- CONSTANTS ---
+const CACHE_KEY_JOBS = "dashboard_jobs_cache";
+const CACHE_KEY_CONFIG = "dashboard_config_cache";
+
+// Helper function for search
 const deepSearch = (obj, word) => {
   for (const key in obj) {
     const value = obj[key];
@@ -32,26 +36,20 @@ const deepSearch = (obj, word) => {
   return false;
 };
 
-// ✅ Generic retry helper: retry on 401 until success or timeout
+// Generic retry helper
 const retryWithTimeout = async (fn, timeoutMs = 5000, intervalMs = 300) => {
   const start = Date.now();
-
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      // Try the actual call
       const result = await fn();
-      return result; // success → exit
+      return result; 
     } catch (err) {
       const status = err?.response?.status;
-
-      // If it's NOT 401 or we've crossed timeout, rethrow and stop retrying
       const elapsed = Date.now() - start;
       if (status !== 401 || elapsed >= timeoutMs) {
         throw err;
       }
-
-      // Otherwise, wait a bit and retry
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
   }
@@ -61,8 +59,8 @@ const formatDate = (isoString) => {
   if (!isoString) return "";
   const date = new Date(isoString);
   const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-  const year = String(date.getFullYear()).slice(-2); // Get last 2 digits of year
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
   return `${day}-${month}-${year}`;
 };
 
@@ -72,98 +70,138 @@ export default function Dashboard() {
   const [page, setPage] = useState(0);
   const [totalJobs, setTotalJobs] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
+  
+  // Loading States
+  const [loading, setLoading] = useState(false); 
+  const [isBackgroundUpdating, setIsBackgroundUpdating] = useState(false);
   const [isPlanExpired, setIsPlanExpired] = useState(false);
 
-  // State for dynamic configuration
+  // Configuration State
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [itemStatusOptions, setItemStatusOptions] = useState([]);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
 
-  // STATE FOR ITEM STATUS COLORS
-  const [itemStatusOptions, setItemStatusOptions] = useState([]);
-
   const [token, setToken] = useState(null);
-
   const navigate = useNavigate();
 
-  // 0. Read token & plan info from sessionStorage once on mount
+  // --- HELPER: Parse Schema ---
+  const processConfigSchema = useCallback((schema) => {
+    let parsedStatusOptions = [];
+    let parsedDefaultStatuses = [];
+    let parsedItemStatusOptions = [];
+
+    // 1. Job Card Status
+    const statusField = schema.find((field) => field.key === "jobcard_status");
+    if (statusField && statusField.options) {
+      parsedStatusOptions = statusField.options;
+      parsedDefaultStatuses = statusField.options
+        .filter((opt) => opt.displayByDefault)
+        .map((opt) => opt.value);
+    }
+
+    // 2. Item Status
+    const itemSchema = schema.find((field) => field.key === "items");
+    if (itemSchema?.fields) {
+      const itemStatusField = itemSchema.fields.find((field) => field.key === "item_status");
+      if (itemStatusField?.options) {
+        parsedItemStatusOptions = itemStatusField.options;
+      }
+    }
+
+    return { parsedStatusOptions, parsedDefaultStatuses, parsedItemStatusOptions };
+  }, []);
+
+  // 1. Initial Mount: Token Check & Cache Validation
   useEffect(() => {
-    const storedToken = sessionStorage.getItem("token");
+    const currentSessionToken = sessionStorage.getItem("token");
     const hasPlanExpired = sessionStorage.getItem("isPlanExpired") === "true";
 
-    if (!storedToken) {
+    if (!currentSessionToken) {
+      // No token in session? Clear any lingering cache to be safe
+      localStorage.removeItem(CACHE_KEY_JOBS);
+      localStorage.removeItem(CACHE_KEY_CONFIG);
       alert("You are not logged in. Please sign in.");
       navigate("/");
       return;
     }
 
-    setToken(storedToken);
+    setToken(currentSessionToken);
     setIsPlanExpired(hasPlanExpired);
-  }, [navigate]);
 
-  // 1. Fetch User Configuration (Schema)
-  useEffect(() => {
-    if (!token) return;
+    // --- CACHE VALIDATION LOGIC ---
+    let validCacheFound = false;
 
-    const fetchConfig = async () => {
+    // A. Validate Jobs Cache
+    const cachedJobsStr = localStorage.getItem(CACHE_KEY_JOBS);
+    if (cachedJobsStr) {
       try {
-        const res = await retryWithTimeout(
-          () =>
-            api.get("/user/get-config", {
-              headers: { authorization: `Bearer ${token}` },
-            }),
-          5000
-        );
-
-        if (res.status === 200 && res.data && res.data.schema) {
-          const schema = res.data.schema;
-
-          // --- Extract Job Card Status (Top Level) ---
-          const statusField = schema.find((field) => field.key === "jobcard_status");
-
-          if (statusField && statusField.options) {
-            setStatusOptions(statusField.options);
-            const defaults = statusField.options
-              .filter((opt) => opt.displayByDefault)
-              .map((opt) => opt.value);
-
-            setSelectedStatuses(defaults);
-          }
-
-          // --- Extract Item Status Options (Nested) ---
-          const itemSchema = schema.find((field) => field.key === "items");
-          if (itemSchema?.fields) {
-            const itemStatusField = itemSchema.fields.find((field) => field.key === "item_status");
-            if (itemStatusField?.options) {
-              setItemStatusOptions(itemStatusField.options);
-            }
-          }
-          // -----------------------------------------------------------
-
+        const cachedWrapper = JSON.parse(cachedJobsStr);
+        
+        // CHECK: Does the token inside the cache match the current session token?
+        if (cachedWrapper.token === currentSessionToken && Array.isArray(cachedWrapper.data)) {
+          console.log("Cache Hit: Token matches. Loading data.");
+          setJobs(cachedWrapper.data);
+          setTotalJobs(cachedWrapper.data.length); // Temporary total until sync
+          validCacheFound = true;
+        } else {
+          // console.log("Cache Miss: Token mismatch. Clearing jobs cache.");
+          localStorage.removeItem(CACHE_KEY_JOBS);
         }
-      } catch (err) {
-        console.error("Error fetching config (even after retry):", err);
-        alert("Timeout loading configuration data. Please check your connection or try again.");
-      } finally {
-        setIsConfigLoaded(true);
+      } catch (e) {
+        console.error("Error parsing jobs cache", e);
+        localStorage.removeItem(CACHE_KEY_JOBS);
       }
-    };
+    }
 
-    fetchConfig();
-  }, [token]);
+    // B. Validate Config Cache
+    const cachedConfigStr = localStorage.getItem(CACHE_KEY_CONFIG);
+    if (cachedConfigStr) {
+      try {
+        const cachedWrapper = JSON.parse(cachedConfigStr);
 
-  // 2. Fetch Jobs (Data)
+        // CHECK: Does the token match?
+        if (cachedWrapper.token === currentSessionToken && cachedWrapper.data) {
+          const { parsedStatusOptions, parsedDefaultStatuses, parsedItemStatusOptions } = processConfigSchema(cachedWrapper.data);
+          setStatusOptions(parsedStatusOptions);
+          setSelectedStatuses(parsedDefaultStatuses);
+          setItemStatusOptions(parsedItemStatusOptions);
+          setIsConfigLoaded(true);
+        } else {
+          // console.log("Config Cache Miss: Token mismatch. Clearing config cache.");
+          localStorage.removeItem(CACHE_KEY_CONFIG);
+        }
+      } catch (e) {
+        console.error("Error parsing config cache", e);
+        localStorage.removeItem(CACHE_KEY_CONFIG);
+      }
+    }
+    // -----------------------------
+
+  }, [navigate, processConfigSchema]);
+
+  // 2. Network Sync (Config & Data)
   useEffect(() => {
     if (!token) return;
 
-    const fetchInitialData = async () => {
+    const syncData = async () => {
+      // Determine if we are loading from scratch or syncing in background
+      // We check actual state (jobs.length) because the previous effect handles the cache loading
+      const isHydrated = jobs.length > 0 && isConfigLoaded;
+      
+      if (isHydrated) {
+        setIsBackgroundUpdating(true);
+      } else {
+        setLoading(true);
+      }
+
       try {
+        // A. Fetch Config
+        await fetchConfig(token);
+        
+        // B. Fetch Job Count & Initial Jobs
         const countRes = await retryWithTimeout(
-          () =>
-            api.get("/user/jobs/count", {
-              headers: { authorization: `Bearer ${token}` },
-            }),
+          () => api.get("/user/jobs/count", { headers: { authorization: `Bearer ${token}` } }),
           5000
         );
 
@@ -174,19 +212,54 @@ export default function Dashboard() {
           }
         }
       } catch (err) {
-        console.error("Error fetching initial data (even after retry):", err);
-        alert("Timeout loading job data. The server might be busy. Please refresh the page.");
+        console.error("Error during sync:", err);
+        if (!isHydrated) alert("Error loading data. Please check connection.");
+      } finally {
+        setLoading(false);
+        setIsBackgroundUpdating(false);
       }
     };
 
-    fetchInitialData();
+    syncData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  const fetchConfig = async (currentToken) => {
+    try {
+      const res = await retryWithTimeout(
+        () => api.get("/user/get-config", { headers: { authorization: `Bearer ${currentToken}` } }),
+        5000
+      );
+
+      if (res.status === 200 && res.data && res.data.schema) {
+        const schema = res.data.schema;
+        
+        // Update State
+        const { parsedStatusOptions, parsedDefaultStatuses, parsedItemStatusOptions } = processConfigSchema(schema);
+        setStatusOptions(parsedStatusOptions);
+        setItemStatusOptions(parsedItemStatusOptions);
+        
+        if (selectedStatuses.length === 0) {
+            setSelectedStatuses(parsedDefaultStatuses);
+        }
+        setIsConfigLoaded(true);
+
+        // --- UPDATE CACHE (With Token) ---
+        localStorage.setItem(CACHE_KEY_CONFIG, JSON.stringify({
+          token: currentToken, // Save token with data
+          data: schema
+        }));
+      }
+    } catch (err) {
+      console.error("Config fetch error:", err);
+    }
+  };
 
   const fetchJobs = async (pageNum, currentToken = token) => {
     if (!currentToken) return;
 
-    setLoading(true);
+    if (pageNum > 0) setLoading(true);
+
     try {
       const res = await retryWithTimeout(
         () =>
@@ -199,23 +272,30 @@ export default function Dashboard() {
 
       if (res.data && res.data.jobs) {
         if (pageNum === 0) {
-          setJobs(res.data.jobs);
+          const fetchedJobs = res.data.jobs;
+          setJobs(fetchedJobs);
+          
+          // --- UPDATE CACHE (With Token) ---
+          localStorage.setItem(CACHE_KEY_JOBS, JSON.stringify({
+            token: currentToken, // Save token with data
+            data: fetchedJobs.slice(0, 100)
+          }));
+          // --------------------------------
         } else {
           setJobs((prev) => [...prev, ...res.data.jobs]);
         }
 
         setPage(pageNum);
-        const totalFetched = (pageNum + 1) * 20;
+        const totalFetched = (pageNum + 1) * 20; 
         setHasMore(totalFetched < totalJobs);
       }
     } catch (err) {
-      console.error("Error fetching jobs (even after retry):", err);
+      console.error("Error fetching jobs:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle checkbox toggle
   const handleStatusChange = (value) => {
     setSelectedStatuses((prev) => {
       if (prev.includes(value)) {
@@ -229,12 +309,10 @@ export default function Dashboard() {
   const filteredJobs = useMemo(() => {
     if (!isConfigLoaded) return [];
 
-    // 1. First filter by Job Status (Checkboxes)
     let result = jobs.filter((job) =>
       selectedStatuses.includes(job.jobcard_status)
     );
 
-    // 2. Then filter by Search Term (if exists)
     if (searchTerm) {
       const searchWords = searchTerm
         .toLowerCase()
@@ -254,9 +332,18 @@ export default function Dashboard() {
       <Navbar />
 
       <div className="job-summary-section">
-        <p className="job-summary">
-          Displayed Jobs: <b>{filteredJobs.length}</b>
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <p className="job-summary" style={{ marginBottom: 0 }}>
+            Displayed Jobs: <b>{filteredJobs.length}</b>
+            </p>
+            {/* Background Update Indicator */}
+            {isBackgroundUpdating && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#666' }}>
+                    <CircularProgress size={14} thickness={5} />
+                    <span style={{ fontSize: '0.8rem' }}>Syncing...</span>
+                </div>
+            )}
+        </div>
 
         <TextField
           label="Search Job Cards"
@@ -289,7 +376,6 @@ export default function Dashboard() {
       {/* --- Filter & Legend Section --- */}
       <div
         className="status-filter-section"
-        // Flex container to separate Job Filters (Left) and Item Legend (Right)
         style={{
           padding: "0 20px",
           marginBottom: "15px",
@@ -300,7 +386,6 @@ export default function Dashboard() {
           gap: "20px"
         }}
       >
-        {/* LEFT: Job Card Status Checkboxes */}
         <div className="job-filters">
           {!isConfigLoaded ? (
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -330,7 +415,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* RIGHT: Item Status Legend */}
         {itemStatusOptions.length > 0 && (
           <div className="item-status-legend" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
             <span style={{ fontWeight: "bold", fontSize: "0.9rem", color: "#555" }}>
@@ -345,7 +429,7 @@ export default function Dashboard() {
                     height: "12px",
                     borderRadius: "50%",
                     backgroundColor: opt.color || "#ccc",
-                    border: "1px solid #ddd" // Slight border for visibility
+                    border: "1px solid #ddd"
                   }}
                 ></span>
                 <span style={{ fontSize: "0.85rem", color: "#333" }}>
@@ -387,7 +471,6 @@ export default function Dashboard() {
                         fontWeight: "400"
                       }}
                     >
-                      {/* Assuming the field name is 'createdAt' based on your description */}
                       • {formatDate(job.createdAt)}
                     </span>
                   </div>
@@ -413,11 +496,7 @@ export default function Dashboard() {
                           (opt) => opt.value === item.item_status
                         );
                         const itemStatusColor = itemStatusConfig?.color || 'transparent';
-
-                        // Use FF opacity for solid row background
                         const rowBackgroundColor = itemStatusColor !== 'transparent' ? itemStatusColor + 'FF' : 'transparent';
-
-                        // Contrast text logic - User requested black text always
                         const rowTextColor = 'black';
 
                         return (
@@ -452,21 +531,22 @@ export default function Dashboard() {
           })
         ) : (
           <p className="no-jobs">
-            {jobs.length === 0 && !loading
+            {jobs.length === 0 && !loading && !isBackgroundUpdating
               ? "No jobs found."
-              : "No jobs match your search or selected filters."}
+              : jobs.length === 0 && (loading || isBackgroundUpdating) 
+                ? "Loading jobs..." 
+                : "No jobs match your search or selected filters."}
           </p>
         )}
       </div>
 
       <div className="pagination">
-        {/* Pagination button logic remains based on totalJobs vs loaded jobs */}
-        {hasMore && !loading && !searchTerm && (
+        {hasMore && !loading && !isBackgroundUpdating && !searchTerm && (
           <button onClick={() => fetchJobs(page + 1)} className="load-more-btn">
             Load More
           </button>
         )}
-        {loading && <p>Loading...</p>}
+        {loading && <div style={{marginTop: '10px'}}><CircularProgress size={24} /></div>}
       </div>
     </div>
   );
