@@ -60,7 +60,6 @@ const defaultConfig = [
     },
 ];
 
-// 🔹 Cookie helpers
 const setCookie = (name, value, days) => {
     const date = new Date();
     date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -84,7 +83,6 @@ const getCookie = (name) => {
 export default function SignIn() {
     const navigate = useNavigate();
 
-    // 🔹 Initialize email from cookie; password left empty
     const [signInData, setSignInData] = useState(() => ({
         email: getCookie("rememberEmail") || "",
         password: "",
@@ -94,11 +92,11 @@ export default function SignIn() {
     const [signUpData, setSignUpData] = useState({ name: "", email: "", password: "" });
     const [error, setError] = useState("");
 
+    const [isLoading, setIsLoading] = useState(false);
+
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         console.log("Token:", token);
-
-        // if (token) navigate("/dashboard");
     }, [navigate]);
 
     const handleSignInChange = (e) => {
@@ -113,46 +111,48 @@ export default function SignIn() {
         e.preventDefault();
         setError("");
 
+        setIsLoading(true);
+
         try {
-            await api.post("/api/signin", signInData).then(async (resp) => {
-                if (resp.status === 204) {
-                    toast.warn("Account not approved by owner. Contact 9601613653");
-                    return;
-                }
+            const resp = await api.post("/api/signin", signInData);
 
-                if (resp.status === 200) {
-                    toast.success("Welcome " + resp.data.user.name);
-                    sessionStorage.setItem("token", resp.data.token);
-                    sessionStorage.setItem("userName", resp.data.user.name);
-                    sessionStorage.setItem("isPlanExpired", resp.data.isPlanExpired);
-                    sessionStorage.setItem("planValidity", resp.data.planValidity);
+            if (resp.status === 204) {
+                toast.warn("Account not approved by owner. Contact 9601613653");
+                setIsLoading(false); // Stop loading if warned
+                return;
+            }
 
-                    const token = resp.data.token;
+            if (resp.status === 200) {
+                toast.success("Welcome " + resp.data.user.name);
+                sessionStorage.setItem("token", resp.data.token);
+                sessionStorage.setItem("userName", resp.data.user.name);
+                sessionStorage.setItem("isPlanExpired", resp.data.isPlanExpired);
+                sessionStorage.setItem("planValidity", resp.data.planValidity);
 
-                    // 🔹 Store email in long-lived cookie (1 year)
-                    setCookie("rememberEmail", signInData.email, 365);
+                const token = resp.data.token;
+                setCookie("rememberEmail", signInData.email, 365);
 
-                    if (!resp.data.schemaConfigured) {
-                        try {
-                            await api.post(
-                                "/user/save-config",
-                                { schema: defaultConfig },
-                                { headers: { authorization: `Bearer ${token}` } }
-                            );
-
-                            navigate("/dashboard");
-                        } catch (configErr) {
-                            console.error("Failed to save default config:", configErr);
-                            const configErrorMessage =
-                                "Sign in successful, but failed to save default settings. Please contact support.";
-                            setError(configErrorMessage);
-                            toast.error(configErrorMessage);
-                        }
-                    } else {
+                if (!resp.data.schemaConfigured) {
+                    try {
+                        await api.post(
+                            "/user/save-config",
+                            { schema: defaultConfig },
+                            { headers: { authorization: `Bearer ${token}` } }
+                        );
                         navigate("/dashboard");
+                    } catch (configErr) {
+                        console.error("Failed to save default config:", configErr);
+                        const configErrorMessage = "Sign in successful, but failed to save default settings. Please contact support.";
+                        setError(configErrorMessage);
+                        toast.error(configErrorMessage);
+                        setIsLoading(false); // Stop loading on inner error
                     }
+                } else {
+                    navigate("/dashboard");
+                    // Note: We do NOT set isLoading(false) here because we are navigating away. 
+                    // Keeping it true prevents the user from clicking again while the page redirects.
                 }
-            });
+            }
         } catch (err) {
             let errorMessage = "Sign in failed.";
             if (err.response?.status === 401) {
@@ -165,6 +165,8 @@ export default function SignIn() {
 
             setError(errorMessage);
             toast.error(errorMessage);
+
+            setIsLoading(false);
         }
     };
 
@@ -172,17 +174,20 @@ export default function SignIn() {
         e.preventDefault();
         setError("");
 
+        setIsLoading(true);
+
         try {
-            await api.post("/api/signup", signUpData).then((resp) => {
-                if (resp.status === 201) {
-                    toast.success(resp.data.message);
-                }
-            });
-            setIsSignUp(false);
+            const resp = await api.post("/api/signup", signUpData);
+            if (resp.status === 201) {
+                toast.success(resp.data.message);
+                setIsSignUp(false);
+            }
         } catch (err) {
             const errorMessage = err.response?.data?.message || "Sign up failed.";
             setError(errorMessage);
             toast.error(errorMessage);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -234,13 +239,20 @@ export default function SignIn() {
                             />
                         </div>
 
-                        <button type="submit" className="btn btn-gradient w-100">
-                            Sign Up
+                        <button type="submit" className="btn btn-gradient w-100" disabled={isLoading}>
+                            {isLoading ? (
+                                <div className="d-flex align-items-center justify-content-center">
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Processing...</span>
+                                </div>
+                            ) : (
+                                "Sign Up"
+                            )}
                         </button>
 
                         <p className="text-center mt-3">
                             Already have an account?{" "}
-                            <button type="button" className="btn btn-link p-0" onClick={() => setIsSignUp(false)}>
+                            <button type="button" className="btn btn-link p-0" onClick={() => setIsSignUp(false)} disabled={isLoading}>
                                 Sign In
                             </button>
                         </p>
@@ -271,13 +283,20 @@ export default function SignIn() {
                             />
                         </div>
 
-                        <button type="submit" className="btn btn-gradient w-100">
-                            Sign In
+                        <button type="submit" className="btn btn-gradient w-100" disabled={isLoading}>
+                            {isLoading ? (
+                                <div className="d-flex align-items-center justify-content-center">
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Verifying...</span>
+                                </div>
+                            ) : (
+                                "Sign In"
+                            )}
                         </button>
 
                         <p className="text-center mt-3">
                             Don’t have an account?{" "}
-                            <button type="button" className="btn btn-link p-0" onClick={() => setIsSignUp(true)}>
+                            <button type="button" className="btn btn-link p-0" onClick={() => setIsSignUp(true)} disabled={isLoading}>
                                 Create New Account
                             </button>
                         </p>
